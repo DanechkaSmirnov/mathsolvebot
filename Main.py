@@ -185,7 +185,7 @@ def delete_selected_task(call):
     task_id = call.data.split('+')[1]
     dq.delete_selected_task(task_id)
     bot.delete_message(call.message.chat.id, call.message.id)
-    dq.decrement_num_of_tasks(call.message.chat.id)
+
 
 
 @bot.callback_query_handler(func=lambda call: dq.check_solver_in_db(
