@@ -1,1 +1,4 @@
 worker: python Main.py
+worker: python database_queries.py
+worker: python keyboards.py
+worker: python STATES.py
