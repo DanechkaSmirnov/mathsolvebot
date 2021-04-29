@@ -89,6 +89,22 @@ def increment_num_of_tasks(user_id):
         print('increment_num_of_tasks_error')
 
 
+def decrement_num_of_tasks(user_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        num_of_tasks = cursor.execute('SELECT number_of_tasks FROM client WHERE user_id = (?)', (user_id,)).fetchone()[
+            0]
+        num_of_tasks += -1
+        cursor.execute("UPDATE client SET number_of_tasks = (?) WHERE user_id = (?)", (num_of_tasks, user_id))
+        con.commit()
+        con.close()
+    except Exception as e:
+        print(e)
+        con.close()
+        print('decrement_num_of_tasks_error')
+
+
 def check_task_in_db(user_id):
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
     cursor = con.cursor()
@@ -267,8 +283,7 @@ def complete_task(user_id):
 def task_completed_message(user_id):
     text_of_task = ''
     text_of_task += 'Количество заданий: ' + str(get_number_of_problems(user_id)) + '\n'
-    text_of_task += 'Тема задания: ' + str(get_theme_of_problems(user_id)) + '\n'
-    text_of_task += 'Сложность заданий: ' + str(get_difficulty_of_problems(user_id)) + '\n'
+    text_of_task += 'Тема заданий: ' + str(get_theme_of_problems(user_id)) + '\n'
     text_of_task += 'Комментарий: ' + str(get_comment_of_problems(user_id)) + '\n'
     return text_of_task
 
@@ -467,9 +482,9 @@ def task_completed_message_for_solver(task_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     text = ''
+    text += 'Номер задания: ' + str(task_id) + '\n'
     text += 'Количество заданий: ' + str(get_num_of_task(task_id)) + '\n'
     text += 'Тема задания: ' + str(get_theme_of_task(task_id)) + '\n'
-    text += 'Сложность заданий: ' + str(get_difficulty_of_task(task_id)) + '\n'
     text += 'Комментарий: ' + str(get_comment_of_task(task_id)) + '\n'
     con.close()
     return text
@@ -675,3 +690,112 @@ def report_task(task_id):
     except Exception as error:
         con.close()
         print(error)
+
+
+def set_price_of_task(task_id, price):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE tasks SET price_of_task = (?) WHERE task_id = (?)", (price, task_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_price_of_task(task_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT price_of_task FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
+def get_balance_of_user(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT balance FROM client WHERE user_id = (?)", (user_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
+def set_balance_of_user(balance, user_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE client SET balance = (?) WHERE user_id = (?)", (balance, user_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_solver_of_task(task_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT solver_id FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
+def add_message_to_support(user_id, text):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("INSERT INTO messages_to_support(user_id, text_of_message) VALUES (?, ?)", (user_id, text))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_list_of_paid_tasks(solver_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 0", (solver_id,)).fetchall()
+    con.close()
+    return a
+
+
+def delete_selected_task(task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM tasks WHERE task_id = (?)", (task_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+def delete_all_photos_of_solution(task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM photos_of_solutions WHERE task_id = (?)", (task_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def check_task_is_already_paid(task_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT status_of_solution FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
+    con.close()
+    return a[0]
+
+def check_task_id_db(task_id):
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute("SELECT * FROM tasks WHERE task_id = (?)", (task_id,))
+    if a.fetchall() == []:
+        con.close()
+        return False
+    con.close()
+    return True
