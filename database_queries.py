@@ -282,7 +282,7 @@ def complete_task(user_id):
 
 def task_completed_message(user_id):
     text_of_task = ''
-    text_of_task += 'Количество заданий: ' + str(get_number_of_problems(user_id)) + '\n'
+    # text_of_task += 'Количество заданий: ' + str(get_number_of_problems(user_id)) + '\n'
     text_of_task += 'Тема заданий: ' + str(get_theme_of_problems(user_id)) + '\n'
     text_of_task += 'Комментарий: ' + str(get_comment_of_problems(user_id)) + '\n'
     return text_of_task
@@ -483,7 +483,7 @@ def task_completed_message_for_solver(task_id):
     cursor = con.cursor()
     text = ''
     text += 'Номер задания: ' + str(task_id) + '\n'
-    text += 'Количество заданий: ' + str(get_num_of_task(task_id)) + '\n'
+    # text += 'Количество заданий: ' + str(get_num_of_task(task_id)) + '\n'
     text += 'Тема задания: ' + str(get_theme_of_task(task_id)) + '\n'
     text += 'Комментарий: ' + str(get_comment_of_task(task_id)) + '\n'
     con.close()

@@ -181,10 +181,20 @@ def solve_choosed_task(call):
 
 @bot.callback_query_handler(func=lambda call: 'delete_task' in call.data)
 def delete_selected_task(call):
-    bot.send_message(call.message.chat.id, 'Заявка успешно удалена')
     task_id = call.data.split('+')[1]
-    dq.delete_selected_task(task_id)
-    bot.delete_message(call.message.chat.id, call.message.id)
+    if dq.check_task_is_already_paid(task_id) in [2, 3]:
+        bot.send_message(call.message.chat.id, 'Заявка успешно удалена')
+        task_id = call.data.split('+')[1]
+        dq.delete_selected_task(task_id)
+        bot.delete_message(call.message.chat.id, call.message.id)
+    if dq.check_task_is_already_paid(task_id) == 0:
+        bot.send_message(call.message.chat.id, 'Задание невозможно удалить, так как оно уже было оплачено')
+        bot.delete_message(call.message.chat.id, call.message.id)
+    if dq.check_task_is_already_paid(task_id) == 1:
+        bot.send_message(call.message.chat.id, 'Задание невозможно удалить, так как оно уже готов')
+        bot.delete_message(call.message.chat.id, call.message.id)
+
+
 
 
 
@@ -255,7 +265,7 @@ def go_back_from_solving_task(call):
 def get_photos_of_solution(call):
     try:
         dq.add_info_log(call.message.chat.id, 'get_photos_of_solution start')
-        bot.send_message(call.message.chat.id, 'Отправляйте фотографии по одной, в конце напишите "Завершить"', reply_markup=kb.sending_photos_of_solution_keyboard())
+        bot.send_message(call.message.chat.id, 'Отправляйте фотографии по одной, в конце нажмите на кнопку "Завершить"', reply_markup=kb.sending_photos_of_solution_keyboard())
         dq.set_solver_state(call.message.chat.id, st.solver_SENDING_SOLUTION)
         dq.add_info_log(call.message.chat.id, 'get_photos_of_solution end')
         bot.delete_message(call.message.chat.id, call.message.id)
@@ -469,9 +479,9 @@ def about_us_info(message):
     bot.send_message(message.chat.id, 'Привет, студент 🤓'
                                       'Дедлайны горят, а задание не готово? Надоели недобросовестные исполнители?\n\n'
                                       'Мы готовы решить любую математическую проблему - будь то матрица, интеграл или'
-                                      'линейное уравнение 👨🏻‍🎓\n\n '
+                                      'линейное уравнение 👨🏻‍🎓\n\n'
                                       'Достаточно оставить заявку в боте и Вы получите ответ в течение 10 минут,'
-                                      'включая цену и комментарий.\n\n '
+                                      'включая цену и комментарий.\n\n'
                                       'Главные преимущества MathHelper - децентрализация, скорость и удобство!\n\n'
                                       'Отправка задания, подтверждение, оплата - всё в одном месте. Найти подрядчика'
                                       'легче, чем заказать еду 🍕\n\n'
@@ -483,8 +493,8 @@ def about_us_info(message):
     message.chat.id) == st.ABOUT_US and message.text == 'ℹ️ Как работает бот?')
 def how_it_words(message):
     bot.send_message(message.chat.id, 'Работа происходит предельно просто:\n\n'
-                                      '1) Вы оставляете заявку, указывая количество, тему и фотографию заданий\n'
-                                      '2) Мы обрабатываем заявку и присылаем Вам подтверждение, включая цену предложенную\n'
+                                      '1) Вы оставляете заявку, указывая тему и отправляя фотографию заданий\n'
+                                      '2) Мы обрабатываем заявку и присылаем Вам подтверждение, включая цену предложенную исполнителем\n'
                                       '3) Вы производите оплату и подтверждаете заявку\n'
                                       '4) Наш исполнитель начинает работу и отправляет вам решение в кратчайшие сроки\n\n'
                                       '⏱ Средняя скорость обработки одной заявки составляет 10 минут'
@@ -655,35 +665,35 @@ def services_back(message):
 
 # Homework
 
+# @bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
+#     message.chat.id) == st.SERVICES and message.text == '📍 Оставить заявку')
+# def create_task(message):
+#     try:
+#         dq.add_info_log(message.chat.id, 'create_task begin')
+#         bot.send_message(message.chat.id, 'Введите количество заданий',
+#                          reply_markup=telebot.types.ReplyKeyboardRemove())
+#         dq.create_task_id(message.chat.id)
+#         dq.set_state(message.chat.id, st.HOMEWORK_NUMBER)
+#         dq.add_info_log(message.chat.id, 'create_task end')
+#     except Exception as error:
+#         bot.send_message(message.chat.id,
+#                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим! ')
+#         dq.add_error_log(message.chat.id, 'create_task_error', error)
+#
+#
+# def check_isdigit(message):
+#     if type(message) == str:
+#         if str.isdigit(message) == True:
+#             return True
+#     return False
+
+
 @bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
     message.chat.id) == st.SERVICES and message.text == '📍 Оставить заявку')
-def create_task(message):
-    try:
-        dq.add_info_log(message.chat.id, 'create_task begin')
-        bot.send_message(message.chat.id, 'Введите количество заданий',
-                         reply_markup=telebot.types.ReplyKeyboardRemove())
-        dq.create_task_id(message.chat.id)
-        dq.set_state(message.chat.id, st.HOMEWORK_NUMBER)
-        dq.add_info_log(message.chat.id, 'create_task end')
-    except Exception as error:
-        bot.send_message(message.chat.id,
-                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим! ')
-        dq.add_error_log(message.chat.id, 'create_task_error', error)
-
-
-def check_isdigit(message):
-    if type(message) == str:
-        if str.isdigit(message) == True:
-            return True
-    return False
-
-
-@bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
-    message.chat.id) == st.HOMEWORK_NUMBER and check_isdigit(message.text))
 def complete_num_of_task(message):
     try:
         dq.add_info_log(message.chat.id, 'complete_num_of_task begin')
-        bot.send_message(message.chat.id, 'Отлично, введите тему задания')
+        bot.send_message(message.chat.id, 'Введите тему задания')
         dq.add_number_of_problems(message.chat.id, message.text)
         dq.set_state(message.chat.id, st.HOMEWORK_THEME)
         dq.add_info_log(message.chat.id, 'complete_num_of_task end')
@@ -948,7 +958,7 @@ def add_money(message):
 def send_message_to_user_with_admin(message):
     user_id = message.text.split()[1]
     text = message.text.replace('admin {} '.format(user_id), '')
-    bot.send_message(user_id, 'Ответ от администрации:\n'+text)
+    bot.send_message(user_id, 'Ответ от администрации:\n'+text, disable_notification=True)
 
 
 

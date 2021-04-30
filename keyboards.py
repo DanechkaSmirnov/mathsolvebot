@@ -81,8 +81,8 @@ def difficulty_keyboard():
 def change_task_keyboard():
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []
-    keyboard_buttons.append(
-        types.InlineKeyboardButton(text='Изменить количество заданий', callback_data='num_of_tasks'))
+    # keyboard_buttons.append(
+        # types.InlineKeyboardButton(text='Изменить количество заданий', callback_data='num_of_tasks'))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Изменить тему ', callback_data='theme_of_task'))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Изменить фото', callback_data='photo_of_task'))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Изменить комментарий', callback_data='comment_of_task'))
@@ -131,6 +131,7 @@ def solver_menu_keyboard():
 def sending_photos_of_solution_keyboard():
     keyboard = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)
     keyboard_buttons = []
+    keyboard_buttons.append(types.KeyboardButton(text='Завершить'))
     keyboard_buttons.append(types.KeyboardButton(text='Отмена'))
     keyboard.add(*keyboard_buttons)
     return keyboard
