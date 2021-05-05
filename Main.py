@@ -187,10 +187,10 @@ def delete_selected_task(call):
         task_id = call.data.split('+')[1]
         dq.delete_selected_task(task_id)
         bot.delete_message(call.message.chat.id, call.message.id)
-    if dq.check_task_is_already_paid(task_id) == 0:
+    elif dq.check_task_is_already_paid(task_id) == 0:
         bot.send_message(call.message.chat.id, 'Задание невозможно удалить, так как оно уже было оплачено')
         bot.delete_message(call.message.chat.id, call.message.id)
-    if dq.check_task_is_already_paid(task_id) == 1:
+    elif dq.check_task_is_already_paid(task_id) == 1:
         bot.send_message(call.message.chat.id, 'Задание невозможно удалить, так как оно уже готов')
         bot.delete_message(call.message.chat.id, call.message.id)
 
@@ -431,7 +431,7 @@ def change_name(message):
     message.chat.id) == st.MAIN and message.text == '❓ Техподдержка')
 def support_info(message):
     bot.send_message(message.chat.id,
-                     'При возникновении дополнительных вопросов обращайтесь в техподдержку, нажав кнопку ниже\n\n'
+                     'Если у вас возникли какие-либо вопросы - обращайтесь в техподдержку, нажав кнопку ниже\n\n'
                      'Задавайте вопросы по существу 👀', reply_markup=kb.support_keyboard())
     dq.set_state(message.chat.id, st.MSG_TO_SUPPORT)
 
@@ -478,12 +478,11 @@ def message_text_to_support(message):
 def about_us_info(message):
     bot.send_message(message.chat.id, 'Привет, студент 🤓'
                                       'Дедлайны горят, а задание не готово? Надоели недобросовестные исполнители?\n\n'
-                                      'Мы готовы решить любую математическую проблему - будь то матрица, интеграл или'
-                                      'линейное уравнение 👨🏻‍🎓\n\n'
-                                      'Достаточно оставить заявку в боте и Вы получите ответ в течение 10 минут,'
-                                      'включая цену и комментарий.\n\n'
+                                      'Мы готовы решить любую математическую задачу - алгебра, дискретная математика '
+                                      'или матанализ для нас не проблема 👨🏻‍🎓\n\n'
+                                      'Достаточно оставить заявку в боте и Вы получите ответ в течение 10 минут!\n\n'
                                       'Главные преимущества MathHelper - децентрализация, скорость и удобство!\n\n'
-                                      'Отправка задания, подтверждение, оплата - всё в одном месте. Найти подрядчика'
+                                      'Отправка задания, подтверждение, оплата - всё в одном месте. Найти подрядчика '
                                       'легче, чем заказать еду 🍕\n\n'
                                       'Обратная связь - @dannysmirnov', reply_markup=kb.about_us_keyboard())
     dq.set_state(message.chat.id, st.ABOUT_US)
@@ -492,9 +491,9 @@ def about_us_info(message):
 @bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
     message.chat.id) == st.ABOUT_US and message.text == 'ℹ️ Как работает бот?')
 def how_it_words(message):
-    bot.send_message(message.chat.id, 'Работа происходит предельно просто:\n\n'
-                                      '1) Вы оставляете заявку, указывая тему и отправляя фотографию заданий\n'
-                                      '2) Мы обрабатываем заявку и присылаем Вам подтверждение, включая цену предложенную исполнителем\n'
+    bot.send_message(message.chat.id, 'Работа с ботом происходит предельно просто:\n\n'
+                                      '1) Вы оставляете заявку, указывая тему и прикрепляя фотографию задачи\n'
+                                      '2) Мы обрабатываем заявку и присылаем Вам подтверждение с ценой, предложенной исполнителем\n'
                                       '3) Вы производите оплату и подтверждаете заявку\n'
                                       '4) Наш исполнитель начинает работу и отправляет вам решение в кратчайшие сроки\n\n'
                                       '⏱ Средняя скорость обработки одной заявки составляет 10 минут'
@@ -693,8 +692,8 @@ def services_back(message):
 def complete_num_of_task(message):
     try:
         dq.add_info_log(message.chat.id, 'complete_num_of_task begin')
-        bot.send_message(message.chat.id, 'Введите тему задания')
-        dq.add_number_of_problems(message.chat.id, message.text)
+        bot.send_message(message.chat.id, 'Введите тему задания', reply_markup=telebot.types.ReplyKeyboardRemove())
+        dq.create_task_id(message.chat.id)
         dq.set_state(message.chat.id, st.HOMEWORK_THEME)
         dq.add_info_log(message.chat.id, 'complete_num_of_task end')
     except Exception as error:
@@ -703,10 +702,10 @@ def complete_num_of_task(message):
         dq.add_error_log(message.chat.id, 'complete_num_of_task_error', error)
 
 
-@bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
-    message.chat.id) == st.HOMEWORK_NUMBER and not check_isdigit(message.text))
-def incomplete_num_of_task(message):
-    bot.send_message(message.chat.id, 'Неверный ввод, введите количество заданий')
+# @bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
+#     message.chat.id) == st.HOMEWORK_NUMBER and not check_isdigit(message.text))
+# def incomplete_num_of_task(message):
+#     bot.send_message(message.chat.id, 'Неверный ввод, введите количество заданий')
 
 
 @bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
