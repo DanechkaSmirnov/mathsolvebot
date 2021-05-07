@@ -1,15 +1,20 @@
 import telebot
 from telebot import types
+import logging
+import time
+
+import cherrypy
 
 import STATES as st
 import database_queries as dq
 import keyboards as kb
 
-token = '1630703867:AAFxhZoYqUFgCQqrXIxXRpENh73uOqBsUR8'
+token = '1746641292:AAE0c9i1cXYPeFglByfTzO6DyHI3FH7TRlk'
 
 key_for_registration = 'rngofrhfrprvbfjegtfsdwlvuufracdp'
 
 bot = telebot.TeleBot(token)
+
 
 # Admin commands
 
@@ -479,7 +484,7 @@ def about_us_info(message):
     bot.send_message(message.chat.id, 'Привет, студент 🤓'
                                       'Дедлайны горят, а задание не готово? Надоели недобросовестные исполнители?\n\n'
                                       'Мы готовы решить любую математическую задачу - алгебра, дискретная математика '
-                                      'или матанализ для нас не проблема 👨🏻‍🎓\n\n'
+                                      'и матанализ для нас не проблема 👨🏻‍🎓\n\n'
                                       'Достаточно оставить заявку в боте и Вы получите ответ в течение 10 минут!\n\n'
                                       'Главные преимущества MathHelper - децентрализация, скорость и удобство!\n\n'
                                       'Отправка задания, подтверждение, оплата - всё в одном месте. Найти подрядчика '
@@ -640,7 +645,8 @@ def services(message):
     try:
         dq.add_info_log(message.chat.id, 'services begin')
         dq.set_state(message.chat.id, st.SERVICES)
-        bot.send_message(message.chat.id, 'Информация о заполнении формы', reply_markup=kb.services_keyboard())
+        bot.send_message(message.chat.id, 'Чтобы отправить нам вашу задачу, нажмите на кнопку "Отправить заявку"\n'
+                                          'Заполните форму по инструкции и ждите ответа в ближайшее время!', reply_markup=kb.services_keyboard())
         dq.add_info_log(message.chat.id, 'services end')
     except Exception as error:
         bot.send_message(message.chat.id,
@@ -958,7 +964,5 @@ def send_message_to_user_with_admin(message):
     user_id = message.text.split()[1]
     text = message.text.replace('admin {} '.format(user_id), '')
     bot.send_message(user_id, 'Ответ от администрации:\n'+text, disable_notification=True)
-
-
 
 bot.infinity_polling(timeout=0, long_polling_timeout=0)
