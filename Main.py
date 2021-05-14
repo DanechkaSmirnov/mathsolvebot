@@ -288,8 +288,18 @@ def delete_selected_task(call):
     call.message.chat.id) != st.solver_SOLVING)
 def report_selected_task(call):
     try:
+        task_id = call.data.split('+')[1]
         bot.send_message(call.message.chat.id, 'Напишите, по какой причине нужно отменить данную заявку',
                          reply_markup=kb.report_task_keyboard())
+        solvers_raw = dq.get_solvers_id()
+        solvers = []
+        for i in solvers_raw:
+            solvers.append(i[0])
+        for solver in solvers:
+            if dq.get_message_id(task_id, solver) is not None:
+                message_id = dq.get_message_id(task_id, solver)
+                dq.task_message_deleted(message_id)
+                bot.delete_message(solver, message_id)
         dq.set_solver_state(call.message.chat.id, st.solver_GET_REPORT_MESSAGE)
         dq.set_reporting_task(call.message.chat.id, call.data.split('+')[1])
     except Exception as error:
@@ -305,6 +315,7 @@ def report_selected_task_back(message):
     try:
         dq.set_solver_state(message.chat.id, st.solver_MAIN)
         solver_stats(message)
+        send_task_to_solvers(dq.get_reporting_task(message.chat.id))
         dq.set_reporting_task(message.chat.id, None)
     except Exception as error:
         bot.send_message(message.chat.id,
@@ -321,15 +332,6 @@ def send_report_to_user(message):
         dq.report_task(task_id)
         dq.set_report_text(task_id, message.text)
         user_id = task_id.split('_')[0]
-        solvers_raw = dq.get_solvers_id()
-        solvers = []
-        for i in solvers_raw:
-            solvers.append(i[0])
-        for solver in solvers:
-            if dq.get_message_id(task_id, solver) is not None:
-                message_id = dq.get_message_id(task_id, solver)
-                dq.task_message_deleted(message_id)
-                bot.delete_message(solver, message_id)
         bot.send_message(message.chat.id, 'Отмена произошла успешно, пользователь оповещен',
                          reply_markup=kb.solver_menu_keyboard())
         dq.set_solver_state(message.chat.id, st.solver_MAIN)
