@@ -329,17 +329,20 @@ def report_selected_task_back(message):
 def send_report_to_user(message):
     try:
         task_id = dq.get_reporting_task(message.chat.id)
-        dq.report_task(task_id)
-        dq.set_report_text(task_id, message.text)
-        user_id = task_id.split('_')[0]
-        bot.send_message(message.chat.id, 'Отмена произошла успешно, пользователь оповещен',
-                         reply_markup=kb.solver_menu_keyboard())
-        dq.set_solver_state(message.chat.id, st.solver_MAIN)
-        dq.set_reporting_task(message.chat.id, None)
-        number_of_task = int(task_id.split('_')[1])
-        bot.send_message(user_id, 'Ваше задание №{} не было принято по следующей причине: '.format(
-            str(number_of_task + 1)) + message.text,
-                         reply_markup=kb.repeat_reported_task_keyboard(task_id))
+        if dq.check_task_is_already_paid(task_id) != 2:
+            dq.report_task(task_id)
+            dq.set_report_text(task_id, message.text)
+            user_id = task_id.split('_')[0]
+            bot.send_message(message.chat.id, 'Отмена произошла успешно, пользователь оповещен',
+                             reply_markup=kb.solver_menu_keyboard())
+            dq.set_solver_state(message.chat.id, st.solver_MAIN)
+            dq.set_reporting_task(message.chat.id, None)
+            number_of_task = int(task_id.split('_')[1])
+            bot.send_message(user_id, 'Ваше задание №{} не было принято по следующей причине: '.format(
+                str(number_of_task + 1)) + message.text,
+                             reply_markup=kb.repeat_reported_task_keyboard(task_id))
+        else:
+            bot.send_message(message.chat.id, 'Задание уже было отменено')
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все '
