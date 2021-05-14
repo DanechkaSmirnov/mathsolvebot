@@ -6,6 +6,8 @@ import STATES as st
 import database_queries as dq
 import keyboards as kb
 import flask
+import random
+import string
 
 API_TOKEN = '1746641292:AAE0c9i1cXYPeFglByfTzO6DyHI3FH7TRlk' #MathHelpersBot
 # API_TOKEN = '1630703867:AAE04VwaS8KxuGYZcMQChC9HFszMvBG4Dv8'  # MathHelpersTestBot
@@ -57,7 +59,8 @@ def banned(message):
     pass
 
 
-@bot.message_handler(func=lambda message: message.text == key_for_registration)
+
+@bot.message_handler(func=lambda message: message.text == dq.get_key_for_registration())
 def registration(message):
     try:
         dq.add_info_log(message.chat.id, 'registration begin')
@@ -68,10 +71,15 @@ def registration(message):
             if dq.check_user_in_db(message.chat.id):
                 dq.delete_solver_from_user_db(message.chat.id)
         else:
-            bot.send_message(message.chat.id, 'Привет, ' + dq.get_solver_name(message.chat.id) + '✨',
+            bot.send_message(message.chat.id, 'Привет, ' + dq.get_solver_name(message.chat.id),
                              reply_markup=kb.solver_menu_keyboard())
             if dq.check_user_in_db(message.chat.id):
                 dq.delete_solver_from_user_db(message.chat.id)
+        letters = string.ascii_lowercase
+        random.seed(int(time.time()))
+        key = ''.join(random.choice(letters) for i in range(20))
+        dq.set_key_for_registration(key)
+
         dq.add_info_log(message.chat.id, 'registration end')
     except Exception as error:
         bot.send_message(message.chat.id,
@@ -145,6 +153,7 @@ def accept_selected_task(call):
             dq.set_status_of_solution(task_id, 4)
         elif dq.check_task_is_already_paid(task_id) == 4:
             bot.send_message(call.message.chat.id, 'Задание уже было взято')
+
     except Exception as error:
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все '
@@ -343,6 +352,7 @@ def send_report_to_user(message):
                              reply_markup=kb.repeat_reported_task_keyboard(task_id))
         else:
             bot.send_message(message.chat.id, 'Задание уже было отменено')
+            dq.set_solver_state(message.chat.id, st.solver_MAIN)
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все '
@@ -1229,7 +1239,10 @@ def admin_add_money(message):
 
 @bot.message_handler(func=lambda message: message.text.lower() == 'key' and message.chat.id == 304987403)
 def get_registration_key(message):
-    bot.send_message(message.chat.id, key_for_registration)
+    try:
+        bot.send_message(message.chat.id, dq.get_key_for_registration())
+    except Exception as error:
+        bot.send_message(message.chat.id, error)
 
 
 @bot.message_handler(func=lambda message: message.text.lower() == 'solvers' and message.chat.id == 304987403)
@@ -1268,9 +1281,7 @@ def get_stats_of_solvers(message):
         dq.add_error_log(message.chat.id, 'get_stats_of_solvers_error', error)
 
 
-@bot.message_handler(func=lambda message: message.text == '4411444' and message.chat.id == 304987403)
-def create_banlist(message):
-    dq.ban_list()
+
 
 
 @bot.message_handler(func=lambda message: message.text.split()[0] == 'ban' and message.chat.id == 304987403)
@@ -1293,9 +1304,13 @@ def ban_user(message):
         dq.add_error_log(message.chat.id, 'get_stats_of_solvers_error', error)
 
 
-@bot.message_handler(func = lambda message: message.text == '4411111' and message.chat.id == 304987403)
-def payment_list(message):
-    dq.payment_list()
+@bot.message_handler(func = lambda message: message.text == '121' and message.chat.id == 304987403)
+def create_key_table(message):
+    dq.create_key_for_registration_table()
+
+
+
+
 
 
 

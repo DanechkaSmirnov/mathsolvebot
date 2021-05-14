@@ -911,3 +911,30 @@ def add_payment_in_database(user_id, amount):
     except Exception as error:
         con.close()
         print(error)
+
+
+def create_key_for_registration_table():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS key (key_for_registration STRING);')
+    con.close()
+
+
+def set_key_for_registration(key):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE key SET key_for_registration = (?)", (key,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_key_for_registration():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute('SELECT key_for_registration FROM key').fetchone()
+    con.close()
+    return a[0]
