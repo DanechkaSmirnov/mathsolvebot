@@ -763,7 +763,7 @@ def add_message_to_support(user_id, text):
 def get_list_of_paid_tasks(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 0", (solver_id,)).fetchall()
+    a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 5", (solver_id,)).fetchall()
     con.close()
     return a
 
@@ -841,6 +841,13 @@ def ban_list():
     cursor.execute('CREATE TABLE IF NOT EXISTS ban_list (user_id BIGINT PRIMARY KEY);')
     con.close()
 
+def payment_list():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS payments (user_id BIGINT, amount BIGINT, time_of_message '
+                   'TIME DEFAULT (CURRENT_TIMESTAMP));')
+    con.close()
+
 def add_user_to_ban_list(user_id):
     try:
         con = sqlite3.connect('bot_database.db')
@@ -889,6 +896,18 @@ def check_task_in_task_list(task_id):
             return False
         con.close()
         return True
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def add_payment_in_database(user_id, amount):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("INSERT INTO payments(user_id, amount) VALUES (?, ?)", (user_id, amount))
+        con.commit()
+        con.close()
     except Exception as error:
         con.close()
         print(error)

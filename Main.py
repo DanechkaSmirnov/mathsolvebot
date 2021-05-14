@@ -121,26 +121,30 @@ def send_task_to_solvers(task_id):
     call.message.chat.id) != st.solver_SOLVING)
 def accept_selected_task(call):
     try:
-        dq.add_info_log(call.message.chat.id, 'accept_selected_task begin')
         task_id = call.data.split('+')[1]
-        photo_of_task = dq.get_picture_of_task(task_id)
-        text = dq.task_completed_message_for_solver(task_id)
-        solvers_raw = dq.get_solvers_id()
-        solvers = []
-        for i in solvers_raw:
-            solvers.append(i[0])
-        for solver in solvers:
-            if dq.get_message_id(task_id, solver) is not None:
-                message_id = dq.get_message_id(task_id, solver)
-                dq.task_message_deleted(message_id)
-                bot.delete_message(solver, message_id)
-        # dq.set_solver_state(call.message.chat.id, st.solver_SOLVING)
-        dq.set_current_task(call.message.chat.id, task_id)
-        # bot.send_photo(call.message.chat.id, photo_of_task, caption=text, reply_markup=kb.solving_keyboard())
-        bot.send_photo(call.message.chat.id, photo_of_task, caption='Выберите, за сколько вы готовы решить эту задачу',
-                       reply_markup=kb.price_list_keyboard(task_id))
-        dq.set_task_solver_id(task_id, call.message.chat.id)
-        dq.add_info_log(call.message.chat.id, 'accept_selected_task end')
+        if dq.check_task_is_already_paid(task_id) == 0:
+            dq.add_info_log(call.message.chat.id, 'accept_selected_task begin')
+            photo_of_task = dq.get_picture_of_task(task_id)
+            text = dq.task_completed_message_for_solver(task_id)
+            solvers_raw = dq.get_solvers_id()
+            solvers = []
+            for i in solvers_raw:
+                solvers.append(i[0])
+            for solver in solvers:
+                if dq.get_message_id(task_id, solver) is not None:
+                    message_id = dq.get_message_id(task_id, solver)
+                    dq.task_message_deleted(message_id)
+                    bot.delete_message(solver, message_id)
+            # dq.set_solver_state(call.message.chat.id, st.solver_SOLVING)
+            dq.set_current_task(call.message.chat.id, task_id)
+            # bot.send_photo(call.message.chat.id, photo_of_task, caption=text, reply_markup=kb.solving_keyboard())
+            bot.send_photo(call.message.chat.id, photo_of_task, caption='Выберите, за сколько вы готовы решить эту задачу',
+                           reply_markup=kb.price_list_keyboard(task_id))
+            dq.set_task_solver_id(task_id, call.message.chat.id)
+            dq.add_info_log(call.message.chat.id, 'accept_selected_task end')
+            dq.set_status_of_solution(task_id, 4)
+        elif dq.check_task_is_already_paid(task_id) == 4:
+            bot.send_message(call.message.chat.id, 'Задание уже было взято')
     except Exception as error:
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все '
@@ -153,17 +157,23 @@ def accept_selected_task(call):
 def send_priced_task_to_user(call):
     try:
         task_id = call.data.split('+')[2]
-        price = call.data.split('+')[1]
-        num_of_task = task_id.split('_')[1]
-        user_id = task_id.split('_')[0]
-        dq.set_status_of_solution(task_id, 3)
-        dq.set_price_of_task(task_id, price)
-        bot.send_message(call.message.chat.id, 'Цена предложена клиенту. Ожидаем ответа',
-                         reply_markup=kb.solver_menu_keyboard())
-        bot.delete_message(call.message.chat.id, call.message.id)
-        bot.send_message(user_id,
-                         'Ваше задание №{} готовы решить за {} рублей'.format(str(int(num_of_task) + 1), price),
-                         reply_markup=kb.decision_of_client_keyboard(task_id))
+        if dq.check_task_is_already_paid(task_id) == 4:
+            price = call.data.split('+')[1]
+            num_of_task = task_id.split('_')[1]
+            user_id = task_id.split('_')[0]
+            dq.set_status_of_solution(task_id, 3)
+            dq.set_price_of_task(task_id, price)
+            bot.send_message(call.message.chat.id, 'Цена предложена клиенту. Ожидаем ответа',
+                             reply_markup=kb.solver_menu_keyboard())
+            bot.delete_message(call.message.chat.id, call.message.id)
+            bot.send_message(user_id,
+                             'Ваше задание №{} готовы решить за {} рублей'.format(str(int(num_of_task) + 1), price),
+                             reply_markup=kb.decision_of_client_keyboard(task_id))
+        elif dq.check_task_is_already_paid(task_id) == 3:
+            bot.send_message(call.message.chat.id, 'К сожалению, данное задание было выбрано одновременно двумя людьми')
+            bot.delete_message(call.message.chat.id, call.message.id)
+
+
     except Exception as error:
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все '
@@ -183,7 +193,7 @@ def pay_for_task(call):
                 if dq.check_task_is_already_paid(task_id) == 3:
                     new_balance = balance_of_user - price_of_task
                     dq.set_balance_of_user(new_balance, user_id)
-                    dq.set_status_of_solution(task_id, 0)
+                    dq.set_status_of_solution(task_id, 5)
                     solver_id = dq.get_solver_of_task(task_id)
                     bot.send_message(call.message.chat.id,
                                      'Задание успешно оплачено. Менеджеры уже приступили к решению!')
@@ -341,6 +351,7 @@ def stop_solving(call):
         dq.add_info_log(call.message.chat.id, 'stop_solving begin')
         task_id = call.data.split('+')[1]
         send_task_to_solvers(task_id)
+        dq.set_status_of_solution(task_id, 0)
         bot.delete_message(call.message.chat.id, call.message.id)
         dq.add_info_log(call.message.chat.id, 'stop_solving end')
     except Exception as error:
@@ -718,7 +729,7 @@ def open_selected_task(call):
                     array_of_photos.append(types.InputMediaPhoto(media=photos[i][0]))
                 bot.send_media_group(call.message.chat.id, array_of_photos)
             if task[1] == 0:
-                bot.send_message(call.message.chat.id, 'Задание еще не выполнено')
+                bot.send_message(call.message.chat.id, 'Задание еще не проверено')
             if task[1] == 2:
                 text_of_report = dq.get_report_text(task_id)
                 number_of_task = int(task_id.split('_')[1])
@@ -732,6 +743,8 @@ def open_selected_task(call):
                 bot.send_message(call.message.chat.id,
                                  'Ваше задание №{} готовы решить за {} рублей'.format(str(int(num_of_task) + 1), price),
                                  reply_markup=kb.decision_of_client_keyboard(task_id))
+            if task[1] == 5:
+                bot.send_message(call.message.chat.id, 'Задание еще не выполнено')
         else:
             bot.send_message(call.message.chat.id, 'Задание было удалено')
 
@@ -1165,6 +1178,7 @@ def add_amount_to_user(message):
     bot.send_message(message.chat.id, 'Оплата на {} рублей прошла успешно'.format(message.successful_payment.total_amount/100), reply_markup=kb.menu_keyboard())
     dq.add_money_to_user(message.chat.id, int(int(message.successful_payment.total_amount)/100))
     dq.set_state(message.chat.id, st.MAIN)
+    dq.add_payment_in_database(message.chat.id, int(int(message.successful_payment.total_amount)/100))
 
 
 
@@ -1272,6 +1286,12 @@ def ban_user(message):
     except Exception as error:
         bot.send_message(message.chat.id, str(error))
         dq.add_error_log(message.chat.id, 'get_stats_of_solvers_error', error)
+
+
+@bot.message_handler(func = lambda message: message.text == '4411111' and message.chat.id == 304987403)
+def payment_list(message):
+    dq.payment_list()
+
 
 
 bot.remove_webhook()

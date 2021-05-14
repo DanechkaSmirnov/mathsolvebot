@@ -97,14 +97,16 @@ def set_of_tasks_keyboard(tasks):
     keyboard_buttons = []
     for task in tasks:
         text_button = ''
-        if task[1] == 0:
-            text_button = 'Задание {}: Готовится'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
+        if task[1] in [0, 4]:
+            text_button = 'Задание {}: Ожидает подтверждения'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
         if task[1] == 1:
             text_button = 'Задание {}: Решено'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
         if task[1] == 2:
             text_button = 'Задание {}: Отменено'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
         if task[1] == 3:
             text_button = 'Задание {}: Ожидает оплаты'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
+        if task[1] == 5:
+            text_button = 'Задание {}: Готовится'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
 
         keyboard_buttons.append(types.InlineKeyboardButton(text=text_button, callback_data=('task_' + str(task[0]))))
     keyboard.add(*keyboard_buttons)
