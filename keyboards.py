@@ -83,10 +83,10 @@ def change_task_keyboard():
     keyboard_buttons = []
     # keyboard_buttons.append(
         # types.InlineKeyboardButton(text='Изменить количество заданий', callback_data='num_of_tasks'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Изменить тему ', callback_data='theme_of_task'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Изменить фото', callback_data='photo_of_task'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Изменить комментарий', callback_data='comment_of_task'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Отправить задание', callback_data='complete_task'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='📖 Изменить тему ', callback_data='theme_of_task'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='📷 Изменить фото', callback_data='photo_of_task'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='📋 Изменить комментарий', callback_data='comment_of_task'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='✅ Отправить задание', callback_data='complete_task'))
     keyboard.add(*keyboard_buttons)
     return keyboard
 

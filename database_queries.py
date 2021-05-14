@@ -639,6 +639,14 @@ def get_today_solutions_of_solver(solver_id):
     con.close()
     return a
 
+def get_yesterday_solutions_of_solver(solver_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT price_of_task FROM tasks WHERE date(date_of_solution) = date('now','-1 day') and solver_id = (?)",
+                       (solver_id,)).fetchall()
+    con.close()
+    return a
+
 
 def set_reporting_task(solver_id, task_id):
     try:
@@ -799,3 +807,88 @@ def check_task_id_db(task_id):
         return False
     con.close()
     return True
+
+def get_last_five_users():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute('SELECT name, user_id, balance FROM (SELECT * FROM client ORDER BY date_of_registration DESC LIMIT 5)').fetchall()
+    con.close()
+    return a
+
+def add_money_to_user(user_id, money):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE client SET balance = balance + (?) WHERE user_id = (?)", (money, user_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_list_of_solvers():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute(
+        'SELECT name, user_id FROM solver').fetchall()
+    con.close()
+    return a
+
+def ban_list():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    cursor.execute('CREATE TABLE IF NOT EXISTS ban_list (user_id BIGINT PRIMARY KEY);')
+    con.close()
+
+def add_user_to_ban_list(user_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("INSERT INTO ban_list(user_id) VALUES (?)", (user_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+def remove_user_to_ban_list(user_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM ban_list WHERE user_id = (?)", (user_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def check_user_in_ban_list(user_id):  # Проверка наличия пользователя в базе данных
+    try:
+        con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+        cursor = con.cursor()
+        a = cursor.execute("SELECT * FROM ban_list WHERE user_id = (?)", (user_id,))
+        if a.fetchall() == []:
+            con.close()
+            return False
+        con.close()
+        return True
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def check_task_in_task_list(task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+        cursor = con.cursor()
+        a = cursor.execute("SELECT * FROM tasks WHERE task_id = (?)", (task_id,))
+        if a.fetchall() == []:
+            con.close()
+            return False
+        con.close()
+        return True
+    except Exception as error:
+        con.close()
+        print(error)
