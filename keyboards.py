@@ -179,10 +179,10 @@ def repeat_reported_task_keyboard(task_id):
 def price_list_keyboard(task_id):
     keyboard = types.InlineKeyboardMarkup(row_width=4)
     keyboard_buttons = []
-    keyboard_buttons.append(types.InlineKeyboardButton(text='150', callback_data='price+150+' + str(task_id)))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='250', callback_data='price+250+' + str(task_id)))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='350', callback_data='price+350+' + str(task_id)))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='500', callback_data='price+500+' + str(task_id)))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='I', callback_data='price+150+' + str(task_id)))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='II', callback_data='price+250+' + str(task_id)))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='III', callback_data='price+350+' + str(task_id)))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='IV', callback_data='price+500+' + str(task_id)))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data='cancel_setting_cost+'+str(task_id)))
     keyboard.add(*keyboard_buttons)
     return keyboard
