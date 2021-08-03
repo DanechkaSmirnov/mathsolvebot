@@ -171,7 +171,7 @@ def report_task_keyboard():
 def repeat_reported_task_keyboard(task_id):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Удалить заявку', callback_data='delete_task+' + str(task_id)))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Удалить задание', callback_data='delete_task+' + str(task_id)))
     keyboard.add(*keyboard_buttons)
     return keyboard
 
@@ -197,12 +197,19 @@ def list_of_paid_tasks_keyboard(tasks):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
+def send_message_to_solver(task_id):
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Связаться с исполнителем', callback_data='ask_solver+' + str(task_id)))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
 
 def decision_of_client_keyboard(task_id):
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard_buttons = []
     keyboard_buttons.append(types.InlineKeyboardButton(text='Оплатить', callback_data='pay+' + str(task_id)))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Пополнить баланс', callback_data='add_money'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Удалить заявку', callback_data='delete_task+'+str(task_id)))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Удалить задание', callback_data='delete_task+'+str(task_id)))
     keyboard.add(*keyboard_buttons)
     return keyboard

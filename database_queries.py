@@ -799,7 +799,7 @@ def check_task_is_already_paid(task_id):
     return a[0]
 
 def check_task_id_db(task_id):
-    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT * FROM tasks WHERE task_id = (?)", (task_id,))
     if a.fetchall() == []:
@@ -936,5 +936,26 @@ def get_key_for_registration():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
     cursor = con.cursor()
     a = cursor.execute('SELECT key_for_registration FROM key').fetchone()
+    con.close()
+    return a[0]
+
+def count_today_users():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute("SELECT COUNT(*) FROM client WHERE date(date_of_registration) = date('now')").fetchone()
+    con.close()
+    return a[0]
+
+def money_on_user_balances():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute("SELECT SUM(balance) FROM client").fetchone()
+    con.close()
+    return a[0]
+
+def today_payments():
+    con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
+    cursor = con.cursor()
+    a = cursor.execute("SELECT SUM(amount) FROM payments WHERE date(time_of_message) = date('now')").fetchone()
     con.close()
     return a[0]

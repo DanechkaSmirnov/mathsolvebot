@@ -10,42 +10,42 @@ import random
 import string
 
 # API_TOKEN = '1746641292:AAE0c9i1cXYPeFglByfTzO6DyHI3FH7TRlk' #MathHelpersBot
-API_TOKEN = '1630703867:AAE04VwaS8KxuGYZcMQChC9HFszMvBG4Dv8'  # MathHelpersTestBot
+API_TOKEN = '1630703867:AAHnOrCzByxChMwduAzFA3UmTuOJYsWuj0k'  # MathHelpersTestBot
 bot = telebot.TeleBot(API_TOKEN, threaded=False)
 key_for_registration = 'rngofrhfrprvbfjegtfsdwlvuufracdp'
 
-WEBHOOK_HOST = '194.67.105.41'
-WEBHOOK_PORT = 443  # 443, 80, 88 or 8443 (port need to be 'open')
-WEBHOOK_LISTEN = '0.0.0.0'  # In some VPS you may need to put here the IP addr
-
-WEBHOOK_SSL_CERT = '/etc/ssl/danny/server.crt'  # Path to the ssl certificate
-WEBHOOK_SSL_PRIV = '/etc/ssl/danny/server.pass.key'  # Path to the ssl private key
-
-WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
-WEBHOOK_URL_PATH = "/%s/" % (API_TOKEN)
-
-logger = telebot.logger
-telebot.logger.setLevel(logging.INFO)
-
-app = flask.Flask(__name__)
-
-
-# Empty webserver index, return nothing, just http 200
-@app.route('/', methods=['GET', 'HEAD'])
-def index():
-    return ''
-
-
-# Process webhook calls
-@app.route(WEBHOOK_URL_PATH, methods=['POST'])
-def webhook():
-    if flask.request.headers.get('content-type') == 'application/json':
-        json_string = flask.request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return ''
-    else:
-        flask.abort(403)
+# WEBHOOK_HOST = '194.67.105.41'
+# WEBHOOK_PORT = 443  # 443, 80, 88 or 8443 (port need to be 'open')
+# WEBHOOK_LISTEN = '0.0.0.0'  # In some VPS you may need to put here the IP addr
+#
+# WEBHOOK_SSL_CERT = '/etc/ssl/danny/server.crt'  # Path to the ssl certificate
+# WEBHOOK_SSL_PRIV = '/etc/ssl/danny/server.pass.key'  # Path to the ssl private key
+#
+# WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
+# WEBHOOK_URL_PATH = "/%s/" % (API_TOKEN)
+#
+# logger = telebot.logger
+# telebot.logger.setLevel(logging.INFO)
+#
+# app = flask.Flask(__name__)
+#
+#
+# # Empty webserver index, return nothing, just http 200
+# @app.route('/', methods=['GET', 'HEAD'])
+# def index():
+#     return ''
+#
+#
+# # Process webhook calls
+# @app.route(WEBHOOK_URL_PATH, methods=['POST'])
+# def webhook():
+#     if flask.request.headers.get('content-type') == 'application/json':
+#         json_string = flask.request.get_data().decode('utf-8')
+#         update = telebot.types.Update.de_json(json_string)
+#         bot.process_new_updates([update])
+#         return ''
+#     else:
+#         flask.abort(403)
 
 
 # Solvers module
@@ -62,6 +62,7 @@ def banned(message):
                                     'migrate_to_chat_id', 'migrate_from_chat_id', 'pinned_message'])
 def wrong_type(message):
     pass
+
 
 
 @bot.message_handler(func=lambda message: message.text == dq.get_key_for_registration())
@@ -649,39 +650,53 @@ def open_selected_task(call):
     try:
         task_id = call.data.replace('task_', '')
         if dq.check_task_id_db(task_id) == True:
+            photo_of_task = dq.get_picture_of_task(task_id)
             task = dq.select_task(task_id)
             if task[1] == 1:
                 photos = dq.get_all_photos_of_solution(task_id)
                 array_of_photos = []
-                for i in range(len(photos)):
+                for i in range(len(photos)-1):
                     array_of_photos.append(types.InputMediaPhoto(media=photos[i][0]))
+                array_of_photos.append(types.InputMediaPhoto(media=photos[len(photos)-1][0], caption='Решение'))
+                solver_id = dq.get_solver_of_task(task_id)
+                bot.send_photo(call.message.chat.id, photo_of_task, caption='Задание')
                 bot.send_media_group(call.message.chat.id, array_of_photos)
+                bot.send_message(call.message.chat.id, 'Если у вас остались вопросы по решению, вы можете задать их исполнителю'
+                                 , reply_markup=kb.send_message_to_solver(task_id))
+
             if task[1] == 0:
-                bot.send_message(call.message.chat.id, 'Задание еще не проверено')
+                bot.send_photo(call.message.chat.id, photo_of_task, caption='Заявку скоро проверят')
             if task[1] == 2:
                 text_of_report = dq.get_report_text(task_id)
                 number_of_task = int(task_id.split('_')[1])
-                bot.send_message(call.message.chat.id,
+                bot.send_photo(call.message.chat.id, photo_of_task, caption=
                                  'Ваше задание №{} не было принято по следующей причине: '.format(str(
-                                     number_of_task + 1)) + text_of_report + '\nУдалите заявку и заполните заново, все получится :)',
+                                     number_of_task + 1)) + text_of_report + '\n\nУдалите задание и заполните заново',
                                  reply_markup=kb.repeat_reported_task_keyboard(task_id))
             if task[1] == 3:
                 price = dq.get_price_of_task(task_id)
                 num_of_task = task_id.split('_')[1]
-                bot.send_message(call.message.chat.id,
+                bot.send_photo(call.message.chat.id, photo_of_task, caption=
                                  'Ваше задание №{} готовы решить за {} рублей'.format(str(int(num_of_task) + 1), price),
                                  reply_markup=kb.decision_of_client_keyboard(task_id))
             if task[1] == 5:
-                bot.send_message(call.message.chat.id, 'Задание еще не выполнено')
+                photo = dq.get_picture_of_task(task_id)
+                bot.send_photo(call.message.chat.id, photo, caption= 'Задание скоро будет выполнено')
         else:
-            bot.send_message(call.message.chat.id, 'Задание было удалено')
+            bot.send_message(call.message.chat.id,'Задание было удалено')
 
     except Exception as error:
         bot.send_message(call.message.chat.id,
-                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим! ')
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
 
 
+@bot.callback_query_handler(func=lambda call: 'ask_solver' in call.data)
+def send_question_to_solver(call):
+    bot.send_message(call.message.chat.id, 'Напишите одним сообщением, какие именно вопросы у вас остались по заданию.\n\n'
+                                           'Ответ от исполнителя появится в этом же чате в ближайшее время', reply_markup=kb.how_it_words())
+    dq.set_state(call.message.chat.id, st.ASK_QUESTION)
 
+@bot.message_handler(func=lambda message: dq.get_state(message.chat.id) == st.ASK_QUESTION and message.text == '🔙 Назад')
 
 
 
@@ -1105,10 +1120,40 @@ def ban_user(message):
     except Exception as error:
         bot.send_message(message.chat.id, str(error))
 
+@bot.message_handler(func=lambda message: message.text == 'new users today' and message.chat.id == 304987403)
+def users_came_today(message):
+    try:
+        bot.send_message(message.chat.id, str(dq.count_today_users()))
+    except Exception as error:
+        bot.send_message(message.chat.id, str(error))
 
-@bot.message_handler(func=lambda message: message.text == '121' and message.chat.id == 304987403)
-def create_key_table(message):
-    dq.create_key_for_registration_table()
+@bot.message_handler(func=lambda message: message.text == 'on balance' and message.chat.id == 304987403)
+def reserved_money(message):
+    try:
+        bot.send_message(message.chat.id, str(dq.money_on_user_balances()))
+    except Exception as error:
+        bot.send_message(message.chat.id, str(error))
+
+@bot.message_handler(func=lambda message: message.text == 'today payments' and message.chat.id == 304987403)
+def today_payments(message):
+    try:
+        bot.send_message(message.chat.id, str(dq.today_payments()))
+    except Exception as error:
+        bot.send_message(message.chat.id, str(error))
+
+@bot.message_handler(func=lambda message: message.text == 'help' and message.chat.id == 304987403)
+def admin_help(message):
+    bot.send_message(message.chat.id, 'Commands\n\n'
+                                      '1) admin [user_id] [text] - Ответ от поддержки\n'
+                                      '2) last5 - пять последних зарегистрированных пользователей\n'
+                                      '3) ban [user_id] / unban [user_id] \n'
+                                      '4) addmoney [user_id] [amount] - добавить деньги пользователю\n'
+                                      '5) key - ключ для регистрации работника\n'
+                                      '6) solvers - список всех работников\n'
+                                      '7) stats - статистика за последние два дня\n'
+                                      '8) new users today - количество новых клиентов сегодня \n'
+                                      '9) on balance - сумма денег на балансах пользователей\n'
+                                      '10) today payments - сумма сегодняшних транзакций')
 
 
 # bot.remove_webhook()
