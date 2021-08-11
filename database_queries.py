@@ -767,6 +767,14 @@ def get_list_of_paid_tasks(solver_id):
     con.close()
     return a
 
+def get_list_of_unpaid_tasks(solver_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 3 and "
+                       "date(date_of_creating) > date('now', '-1 days') and date(date_of_creating) <= date('now')", (solver_id,)).fetchall()
+    con.close()
+    return a
+
 
 def delete_selected_task(task_id):
     try:
@@ -825,6 +833,44 @@ def add_money_to_user(user_id, money):
     except Exception as error:
         con.close()
         print(error)
+
+
+def set_question_task_id(user_id, task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE client SET question_task_id = (?) WHERE user_id = (?)", (task_id, user_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+def get_question_task_id(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT question_task_id FROM client WHERE user_id = (?)", (user_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
+def set_answer_task_id(user_id, task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET answer_task_id = (?) WHERE user_id = (?)", (task_id, user_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+def get_answer_task_id(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT answer_task_id FROM solver WHERE user_id = (?)", (user_id,)).fetchone()
+    con.close()
+    return a[0]
 
 
 def get_list_of_solvers():
@@ -959,3 +1005,14 @@ def today_payments():
     a = cursor.execute("SELECT SUM(amount) FROM payments WHERE date(time_of_message) = date('now')").fetchone()
     con.close()
     return a[0]
+
+# def change_solver_status():
+#     try:
+#         con = sqlite3.connect('bot_database.db')
+#         cursor = con.cursor()
+#         cursor.execute("UPDATE solver SET CASE WHEN status = True ")
+#         con.commit()
+#         con.close()
+#     except Exception as error:
+#         con.close()
+#         print(error)

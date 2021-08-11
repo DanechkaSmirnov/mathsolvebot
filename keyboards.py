@@ -127,6 +127,12 @@ def solver_menu_keyboard():
     keyboard_buttons = []
     keyboard_buttons.append(types.KeyboardButton(text='Статистика'))
     keyboard_buttons.append(types.KeyboardButton(text='Список оплаченных задач'))
+    keyboard_buttons.append(types.KeyboardButton(text='Список неоплаченных задач'))
+
+    # if status == True:
+    #     keyboard_buttons.append(types.KeyboardButton(text='Online✅'))
+    # elif status == False:
+    #     keyboard_buttons.append(types.KeyboardButton(text='Offline❌ '))
     keyboard.add(*keyboard_buttons)
     return keyboard
 
@@ -154,8 +160,14 @@ def solving_keyboard():
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []
     keyboard_buttons.append(types.InlineKeyboardButton(text='Отправить решение', callback_data='send_solution'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data='go_back_from_there'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data='back_from_solving'))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
 
+def watch_unpaid_task_keyboard():
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data='back_from_watching_free_task'))
     keyboard.add(*keyboard_buttons)
     return keyboard
 
@@ -197,10 +209,28 @@ def list_of_paid_tasks_keyboard(tasks):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
+def list_of_unpaid_tasks_keyboard(tasks):
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    for task in tasks:
+        text_of_button = str(task[0])+': {} рублей'.format(str(task[1]))
+        keyboard_buttons.append(types.InlineKeyboardButton(text=text_of_button, callback_data='free_task+'+str(task[0])))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=('back_from_free_tasks')))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
 def send_message_to_solver(task_id):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []
     keyboard_buttons.append(types.InlineKeyboardButton(text='Связаться с исполнителем', callback_data='ask_solver+' + str(task_id)))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
+def answer_clients_question(task_id):
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    keyboard_buttons.append(
+        types.InlineKeyboardButton(text='Ответить на вопрос', callback_data=f'send_answer+{str(task_id)}'))
     keyboard.add(*keyboard_buttons)
     return keyboard
 
