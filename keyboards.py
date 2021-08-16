@@ -109,6 +109,8 @@ def set_of_tasks_keyboard(tasks):
             text_button = 'Задание {}: Готовится'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
 
         keyboard_buttons.append(types.InlineKeyboardButton(text=text_button, callback_data=('task_' + str(task[0]))))
+    # if len(tasks) > 5:
+
     keyboard.add(*keyboard_buttons)
     return keyboard
 
@@ -135,6 +137,17 @@ def solver_menu_keyboard():
     #     keyboard_buttons.append(types.KeyboardButton(text='Offline❌ '))
     keyboard.add(*keyboard_buttons)
     return keyboard
+
+def check_solver_account_keyboard():
+    keyboard = types.ReplyKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    keyboard_buttons.append(types.KeyboardButton(text='Статистика'))
+    keyboard_buttons.append(types.KeyboardButton(text='Список оплаченных задач'))
+    keyboard_buttons.append(types.KeyboardButton(text='Список неоплаченных задач'))
+    keyboard_buttons.append(types.KeyboardButton(text='Назад'))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
 
 def sending_photos_of_solution_keyboard():
     keyboard = types.ReplyKeyboardMarkup(row_width=1, one_time_keyboard=True)

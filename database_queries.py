@@ -490,7 +490,14 @@ def task_completed_message_for_solver(task_id):
     return text
 
 
-def get_num_of_sended_photos(solver_id):
+def get_num_of_sended_photos(task_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT COUNT (*) FROM photos_of_solutions WHERE task_id = (?)", (task_id,)).fetchone()
+    con.close()
+    return a[0]
+
+def get_num_of_solution_photos(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT current_photo_sended FROM solver WHERE user_id = (?)", (solver_id,)).fetchone()
@@ -528,7 +535,7 @@ def add_photo_of_solution(solver_id, photo):
         con = sqlite3.connect('bot_database.db')
         cursor = con.cursor()
         task_id = get_current_task(solver_id)
-        photo_id = str(task_id) + '_' + str(get_num_of_sended_photos(solver_id))
+        photo_id = str(task_id) + '_' + str(get_num_of_solution_photos(solver_id))
         increment_num_of_sended_photos(solver_id)
         cursor.execute("INSERT INTO photos_of_solutions(photo_id, task_id, photo) VALUES (?, ?, ?)",
                        (photo_id, task_id, photo))
@@ -775,6 +782,14 @@ def get_list_of_unpaid_tasks(solver_id):
     con.close()
     return a
 
+def get_list_of_solved_task(solver_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 1 and "
+                       "date(date_of_creating) > date('now', '-1 days') and date(date_of_creating) <= date('now')",
+                       (solver_id,)).fetchall()
+    con.close()
+    return a
 
 def delete_selected_task(task_id):
     try:
