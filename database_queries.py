@@ -291,11 +291,14 @@ def task_completed_message(user_id):
 def select_set_of_task(user_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    tasks = cursor.execute("SELECT task_id, status_of_solution, date_of_creating FROM tasks WHERE user_id = (?)",
+    tasks = cursor.execute("SELECT task_id, status_of_solution, date_of_creating FROM (SELECT * FROM tasks ORDER BY task_id DESC)"
+                           "WHERE user_id = (?)",
                            (user_id,)).fetchall()
     con.commit()
     con.close()
     return tasks
+
+
 
 
 def select_task(task_id):
@@ -330,6 +333,20 @@ def check_solver_in_db(user_id):
         return False
     con.close()
     return True
+
+def check_photo_of_task(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    num_of_tasks = cursor.execute("SELECT number_of_tasks FROM client WHERE user_id = (?)", (user_id,)).fetchone()[
+        0]
+    task_id = str(user_id) + '_' + str(num_of_tasks)
+    a = cursor.execute("SELECT picture_of_task FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
+    if a[0] == None:
+        con.close()
+        return False
+    con.close()
+    return True
+
 
 
 def set_solver_state(user_id, state):

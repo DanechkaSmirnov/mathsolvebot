@@ -78,6 +78,7 @@ def complete_photo_of_task(message):
                 bot.send_message(message.chat.id, 'Оставьте комментарий к заявке')
                 photo_id = bot.get_file(message.photo[-1].file_id).file_id
                 dq.add_photo_of_problems(message.chat.id, photo_id)
+                dq.set_state(message.chat.id, st.HOMEWORK_COMMENT)
                 bot.register_next_step_handler(message, complete_comment_of_task)
             if dq.get_state(message.chat.id) == st.CHANGE_TASK:
                 photo_id = bot.get_file(message.photo[-1].file_id).file_id
@@ -91,7 +92,7 @@ def complete_photo_of_task(message):
                 dq.add_photo_of_solution(message.chat.id, photo)
     except Exception as error:
         bot.send_message(message.chat.id,
-                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!'+str(error))
 
 
 @bot.message_handler(func=lambda message: message.text == dq.get_key_for_registration())
@@ -178,6 +179,9 @@ def client_back_steps(message):
                 dq.set_state(message.chat.id, st.MAIN)
                 bot.send_message(message.chat.id, dq.print_account_info(message.chat.id),
                                  reply_markup=kb.menu_keyboard())
+
+            elif dq.get_state(message.chat.id) == st.HOMEWORK_THEME:
+                services(message)
 
             elif dq.get_state(message.chat.id) == st.SEND_MESSAGE_TO_SUPPORT:
                 bot.send_message(message.chat.id,
@@ -632,11 +636,7 @@ def support_info(message):
     func=lambda message: message.text == '💬 Отправить запрос' and dq.check_user_in_db(message.chat.id))
 def send_message_to_support(message):
     try:
-        bot.send_message(message.chat.id, 'Напишите, с чем у вас возникла проблема\n\n'
-                                          'Для удобства и скорости ответа воспользуйтесь формой:\n\n'
-                                          'Проблема: ...\n'
-                                          'Описание проблемы: ...\n'
-                                          'Идеи по ее решению: ...', reply_markup=kb.how_it_words())
+        bot.send_message(message.chat.id, 'Напишите, с чем конкретно у вас возникла проблема\n\n', reply_markup=kb.how_it_words())
         dq.set_state(message.chat.id, st.SEND_MESSAGE_TO_SUPPORT)
     except Exception as error:
         bot.send_message(message.chat.id,
@@ -706,6 +706,11 @@ def account(message):
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
 
+@bot.callback_query_handler(func=lambda call: 'page_' in call.data)
+def select_page(call):
+    page = int(call.data.replace('page_', ''))
+    bot.edit_message_reply_markup(call.message.chat.id, call.message.id,
+                                  reply_markup=kb.set_of_tasks_keyboard(dq.select_set_of_task(call.message.chat.id), page))
 
 @bot.message_handler(func=lambda message: message.text == '📍 История заявок' and dq.check_user_in_db(
     message.chat.id) == True and dq.get_state(
@@ -903,8 +908,9 @@ def services(message):
 def complete_num_of_task(message):
     try:
         bot.send_message(message.chat.id, 'Введите тему задания (матанализ, алгебра и т.д)',
-                         reply_markup=telebot.types.ReplyKeyboardRemove())
+                         reply_markup=kb.how_it_words())
         dq.create_task_id(message.chat.id)
+        dq.set_state(message.chat.id, st.HOMEWORK_THEME)
         bot.register_next_step_handler(message, complete_theme_of_task)
     except Exception as error:
         bot.send_message(message.chat.id,
@@ -919,9 +925,12 @@ def complete_num_of_task(message):
 
 def complete_theme_of_task(message):
     try:
-        bot.send_message(message.chat.id, 'Отправьте фотографию задания')
-        dq.add_theme_of_problems(message.chat.id, message.text)
-        dq.set_state(message.chat.id, st.HOMEWORK_TASK)
+        if message.text != '🔙 Назад':
+            bot.send_message(message.chat.id, 'Отправьте фотографию задания', reply_markup=types.ReplyKeyboardRemove())
+            dq.add_theme_of_problems(message.chat.id, message.text)
+            dq.set_state(message.chat.id, st.HOMEWORK_TASK)
+        else:
+            services(message)
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -1077,6 +1086,7 @@ def completed_task(call):
         send_task_to_solvers(task_id)
         dq.set_state(call.message.chat.id, st.MAIN)
         bot.delete_message(call.message.chat.id, call.message.id)
+
     except Exception as error:
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -1310,9 +1320,14 @@ def show_task_id(message):
         bot.send_message(message.chat.id, 'Задание было удалено')
 
 
-@bot.message_handler(func=lambda message: 'solver account' in message.text and message.chat.id == 304987403)
-def watch_solver_account(message):
-    solver_id = message.text.replace('solver account ', '')
+
+
+
+# @bot.message_handler(func=lambda message: 'solver account' in message.text and message.chat.id == 304987403)
+# def watch_solver_account(message):
+#     solver_id = message.text.replace('solver account ', '')
+
+
 
 
 

@@ -1,5 +1,5 @@
 from telebot import types
-
+from math import ceil
 
 def menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(row_width=2)
@@ -91,10 +91,16 @@ def change_task_keyboard():
     return keyboard
 
 
+
 # Статусы задания: 0 - решается, 1 - решено, 2 - отменено, 3 - ожидает оплаты
-def set_of_tasks_keyboard(tasks):
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
+def set_of_tasks_keyboard(tasks, page=1):
     keyboard_buttons = []
+    num_of_pages = ceil(len(tasks) / 5)
+    num_of_tasks = len(tasks)
+    if num_of_pages != page:
+        tasks = tasks[(page-1)*5:(page)*5]
+    else:
+        tasks = tasks[(page-1)*5:]
     for task in tasks:
         text_button = ''
         if task[1] in [0, 4]:
@@ -107,11 +113,17 @@ def set_of_tasks_keyboard(tasks):
             text_button = 'Задание {}: Ожидает оплаты'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
         if task[1] == 5:
             text_button = 'Задание {}: Готовится'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
-
         keyboard_buttons.append(types.InlineKeyboardButton(text=text_button, callback_data=('task_' + str(task[0]))))
-    # if len(tasks) > 5:
-
-    keyboard.add(*keyboard_buttons)
+    keyboard_buttons = [[i] for i in keyboard_buttons]
+    arrows = []
+    if num_of_tasks > 5:
+        if page != 1:
+            arrows.append(types.InlineKeyboardButton(text='<--', callback_data=(f'page_{page-1}')))
+        if page != num_of_pages:
+            arrows.append(types.InlineKeyboardButton(text='-->', callback_data=(f'page_{page+1}')))
+    if len(arrows) != 0:
+        keyboard_buttons.append(arrows)
+    keyboard = types.InlineKeyboardMarkup(keyboard_buttons)
     return keyboard
 
 
