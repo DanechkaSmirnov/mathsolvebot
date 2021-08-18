@@ -9,7 +9,7 @@ from api_token import API_TOKEN, yoomoney_token
 import flask
 import random
 import string
-
+import inspect
 
 bot = telebot.TeleBot(API_TOKEN, threaded=False)
 
@@ -134,11 +134,13 @@ def send_task_to_solvers(task_id):
     try:
         text = dq.task_completed_message_for_solver(task_id)
         photo = dq.get_picture_of_task(task_id)
-        solvers = dq.get_solvers_id()
+        solvers = dq.get_solvers_from_current_group()
+        group = dq.get_current_group()
         for solver in solvers:
             message_to_save = bot.send_photo(solver[0], photo, caption=text,
                                              reply_markup=kb.solver_task_keyboard(task_id, solver[0]))
-            dq.save_sended_task(message_to_save.id, task_id, solver[0])
+            dq.save_sended_task(message_to_save.id, task_id, solver[0], group)
+        dq.increment_current_group()
     except Exception as error:
         bot.send_message(task_id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все '
@@ -810,7 +812,6 @@ def enter_question_to_solver(message):
                 array_of_photos = array_of_photos[10:]
                 bot.send_media_group(solver_id, send_ten_photos)
             bot.send_media_group(solver_id, array_of_photos)
-        bot.send_media_group(solver_id, array_of_photos)
         bot.send_message(solver_id, 'ВНИМАНИЕ, ВОПРОС\n\nОтветьте на него так, чтобы клиенту все было понятно',
                          reply_markup=kb.answer_clients_question(task_id))
         bot.send_message(message.chat.id, 'Вопрос успешно доставлен. Скоро вам ответят',
@@ -1273,6 +1274,15 @@ def reserved_money(message):
 def today_payments(message):
     try:
         bot.send_message(message.chat.id, str(dq.today_payments()))
+    except Exception as error:
+        bot.send_message(message.chat.id, str(error))
+
+@bot.message_handler(func=lambda message: 'set group' in message.text.lower() and message.chat.id == 304987403)
+def set_num_of_group(message):
+    try:
+        solver_id = message.text.split()[2]
+        num_of_group = message.text.split()[3]
+        dq.set_solver_group(solver_id, num_of_group)
     except Exception as error:
         bot.send_message(message.chat.id, str(error))
 
