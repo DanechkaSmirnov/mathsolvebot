@@ -396,12 +396,41 @@ def get_solvers_id():
     con.close()
     return a
 
-def get_solvers_from_current_group():
+def get_solvers_from_selected_group(group):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    a = cursor.execute("SELECT solver.user_id FROM solver JOIN groups ON solver.num_of_group = groups.current_group").fetchall()
+    a = cursor.execute("SELECT user_id FROM solver WHERE num_of_group = (?)", (group,)).fetchall()
     con.close()
     return a
+
+def add_error_to_error_list(user_id, name_of_function, error_text):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("INSERT INTO error_list(user_id, name_of_function, error_text) VALUES (?, ?, ?))", (user_id, name_of_function, error_text))
+        con.commit()
+        con.close()
+    except:
+        con.close()
+        print('add_name_error')
+
+def add_solver_profit_made(solver_id, price):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET profit_made = profit_made + (?) WHERE user_id = (?)", (price, solver_id))
+        con.commit()
+        con.close()
+    except:
+        con.close()
+        print('add_name_error')
+
+
+def get_num_of_next_group(task_id):
+    num_of_groups = int(get_num_of_groups())
+    current_group = int(get_group_of_task(task_id))
+    current_group = (current_group + 1) % num_of_groups
+    return current_group
 
 
 def save_sended_task(message_id, task_id, solver_id, group):
@@ -818,11 +847,24 @@ def add_message_to_support(user_id, text):
         con.close()
         print(error)
 
+def set_time_of_accept(task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        now = datetime.now()
+        date_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("UPDATE tasks SET time_of_accept = (?) WHERE task_id = (?)", (date_time, task_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
 
 def get_list_of_paid_tasks(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 5", (solver_id,)).fetchall()
+    a = cursor.execute("SELECT task_id, price_of_task, time_of_accept FROM tasks WHERE solver_id = (?) and status_of_solution = 5", (solver_id,)).fetchall()
     con.close()
     return a
 
@@ -900,6 +942,42 @@ def add_money_to_user(user_id, money):
     except Exception as error:
         con.close()
         print(error)
+
+def set_rotating_task_id(solver_id, task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET rotating_task_id = (?) WHERE user_id = (?)", (task_id, solver_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+def get_rotating_task_id(solver_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT rotating_task_id FROM solver WHERE user_id = (?)", (solver_id,)).fetchone()
+    con.close()
+    return a[0]
+
+def set_group_of_task(task_id, group):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE tasks SET num_of_group = (?) WHERE task_id = (?)", (group, task_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+def get_group_of_task(task_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT num_of_group FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
+    con.close()
+    return a[0]
 
 
 def set_question_task_id(user_id, task_id):

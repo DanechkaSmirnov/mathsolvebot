@@ -1,5 +1,6 @@
 from telebot import types
 from math import ceil
+from datetime import datetime
 
 def menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(row_width=2)
@@ -150,7 +151,7 @@ def solver_menu_keyboard():
     keyboard.add(*keyboard_buttons)
     return keyboard
 
-def check_solver_account_keyboard():
+def check_solver_account_keyboard(solver_id):
     keyboard = types.ReplyKeyboardMarkup(row_width=1)
     keyboard_buttons = []
     keyboard_buttons.append(types.KeyboardButton(text='Статистика'))
@@ -177,6 +178,16 @@ def solver_task_keyboard(task_id, solver_id):
         types.InlineKeyboardButton(text='✅', callback_data='accept+' + str(task_id) + '+' + str(solver_id)))
     keyboard_buttons.append(
         types.InlineKeyboardButton(text='💀', callback_data='report+' + str(task_id) + '+' + str(solver_id)))
+    keyboard_buttons.append(
+        types.InlineKeyboardButton(text='➡️', callback_data='rotate+' + str(task_id) + '+' + str(solver_id)))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
+def rotation_keyboard():
+    keyboard = types.ReplyKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    keyboard_buttons.append(types.KeyboardButton(text='Отправить следующей группе'))
+    keyboard_buttons.append(types.KeyboardButton(text='Назад'))
     keyboard.add(*keyboard_buttons)
     return keyboard
 
@@ -224,11 +235,14 @@ def price_list_keyboard(task_id):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
-def list_of_paid_tasks_keyboard(tasks):
+def list_of_paid_tasks_keyboard(tasks, time):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []
     for task in tasks:
-        text_of_button = str(task[0])+': {} рублей'.format(str(task[1]))
+        delay = time-datetime.strptime(task[2], "%Y-%m-%d %H:%M:%S")
+        minutes = str(delay.seconds%3600//60) if delay.seconds%3600//60 >= 10 else f'0{delay.seconds%3600//60}'
+        hours = delay.seconds//3600
+        text_of_button = str(task[0])+': {} рублей, {}:{}'.format(str(task[1]), hours, minutes)
         keyboard_buttons.append(types.InlineKeyboardButton(text=text_of_button, callback_data='paid_task+'+str(task[0])))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=('back_from_paid_tasks')))
     keyboard.add(*keyboard_buttons)
@@ -241,6 +255,16 @@ def list_of_unpaid_tasks_keyboard(tasks):
         text_of_button = str(task[0])+': {} рублей'.format(str(task[1]))
         keyboard_buttons.append(types.InlineKeyboardButton(text=text_of_button, callback_data='free_task+'+str(task[0])))
     keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=('back_from_free_tasks')))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
+def list_of_completed_tasks_keyboard(tasks):
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    for task in tasks:
+        text_of_button = str(task[0])+': {} рублей'.format(str(task[1]))
+        keyboard_buttons.append(types.InlineKeyboardButton(text=text_of_button, callback_data='completed+'+str(task[0])))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=('completed_close')))
     keyboard.add(*keyboard_buttons)
     return keyboard
 
