@@ -461,6 +461,7 @@ def send_task_to_next_group(message):
         dq.set_group_of_task(dq.get_rotating_task_id(message.chat.id), next_group)
         send_task_to_solvers(dq.get_rotating_task_id(message.chat.id), from_client=False)
         dq.set_rotating_task_id(message.chat.id, None)
+        bot.send_message(message.chat.id, 'Задание успешно отправлено следующей группе', reply_markup=kb.solver_menu_keyboard())
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -1528,7 +1529,7 @@ def open_solution_of_selected_task(task_id, message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.message_handler(func=lambda message: 'solved tasks' in message.text and message.chat.id == 304987403)
+@bot.message_handler(func=lambda message: message.text.split()[0] == 'solved' and message.chat.id == 304987403)
 def watch_solver_account(message):
     try:
         solver_id = message.text.split()[2]
@@ -1556,6 +1557,34 @@ def open_completed_task(call):
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
+@bot.message_handler(func=lambda message: message.text.split()[0]=='unsolved' and message.chat.id == 304987403)
+def check_unsolved_tasks_of_solver(message):
+    try:
+        solver_id = message.text.split()[2]
+        tasks = dq.get_list_of_paid_tasks(solver_id)
+        time = datetime.now()
+        bot.send_message(message.chat.id, 'Нерешенные задания', reply_markup=kb.list_of_solvers_paid_tasks_keyboard(tasks, time))
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+@bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'unsolved')
+def open_unsolved_task(call):
+    try:
+        task_id = call.data.split('+')[1]
+        open_solution_of_selected_task(task_id, call.message)
+    except Exception as error:
+        bot.send_message(call.message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+@bot.callback_query_handler(func=lambda call: call.data == 'back_from_unsolved_tasks')
+def back_from_unsolved_tasks(call):
+    bot.delete_message(call.message.chat.id, call.message.id)
+
+
+
 @bot.message_handler(func=lambda message: message.text.lower() == 'help' and message.chat.id == 304987403)
 def admin_help(message):
     try:
@@ -1569,7 +1598,11 @@ def admin_help(message):
                                           '7) stats - статистика за последние два дня\n'
                                           '8) new users today - количество новых клиентов сегодня \n'
                                           '9) on balance - сумма денег на балансах пользователей\n'
-                                          '10) today payments - сумма сегодняшних транзакций')
+                                          '10) today payments - сумма сегодняшних транзакций'
+                                          '11) set group [solver_id] [group] - назначить группу менеджеру'
+                                          '12) show [task_id] - показать информацию о задании'
+                                          '13) solved task [solver_id] - решенные задачи за последний день'
+                                          '14) unsolved task [solver_id] - нерешенные задачи')
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')

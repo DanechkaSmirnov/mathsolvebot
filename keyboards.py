@@ -248,6 +248,21 @@ def list_of_paid_tasks_keyboard(tasks, time):
     keyboard.add(*keyboard_buttons)
     return keyboard
 
+def list_of_solvers_paid_tasks_keyboard(tasks, time):
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    for task in tasks:
+        delay = time - datetime.strptime(task[2], "%Y-%m-%d %H:%M:%S")
+        minutes = str(
+            delay.seconds % 3600 // 60) if delay.seconds % 3600 // 60 >= 10 else f'0{delay.seconds % 3600 // 60}'
+        hours = delay.seconds // 3600
+        text_of_button = str(task[0]) + ': {} рублей, {}:{}'.format(str(task[1]), hours, minutes)
+        keyboard_buttons.append(
+            types.InlineKeyboardButton(text=text_of_button, callback_data='unsolved+' + str(task[0])))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=('back_from_unsolved_tasks')))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
 def list_of_unpaid_tasks_keyboard(tasks):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []

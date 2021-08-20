@@ -407,12 +407,12 @@ def add_error_to_error_list(user_id, name_of_function, error_text):
     try:
         con = sqlite3.connect('bot_database.db')
         cursor = con.cursor()
-        cursor.execute("INSERT INTO error_list(user_id, name_of_function, error_text) VALUES (?, ?, ?))", (user_id, name_of_function, error_text))
+        cursor.execute("INSERT INTO error_list(user_id, name_of_function, error_text) VALUES (?, ?, ?)", (user_id, name_of_function, error_text))
         con.commit()
         con.close()
-    except:
+    except Exception as error:
         con.close()
-        print('add_name_error')
+        print(str(error))
 
 def add_solver_profit_made(solver_id, price):
     try:
@@ -495,6 +495,17 @@ def get_num_of_groups():
     a = cursor.execute("SELECT num_of_groups FROM groups").fetchone()
     con.close()
     return a[0]
+
+def set_number_of_groups(number):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE groups SET num_of_groups = (?)", (number,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print('increment'+str(error))
 
 def increment_current_group():
     try:
@@ -867,6 +878,8 @@ def get_list_of_paid_tasks(solver_id):
     a = cursor.execute("SELECT task_id, price_of_task, time_of_accept FROM tasks WHERE solver_id = (?) and status_of_solution = 5", (solver_id,)).fetchall()
     con.close()
     return a
+
+
 
 def get_list_of_unpaid_tasks(solver_id):
     con = sqlite3.connect('bot_database.db')
