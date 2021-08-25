@@ -75,7 +75,6 @@ def complete_photo_of_task(message):
                 photo_id = bot.get_file(message.photo[-1].file_id).file_id
                 dq.add_photo_of_problems(message.chat.id, photo_id)
                 dq.set_state(message.chat.id, st.HOMEWORK_COMMENT)
-                bot.register_next_step_handler(message, complete_comment_of_task)
             if dq.get_state(message.chat.id) == st.CHANGE_TASK:  # Замена фотографии составленного заказа
                 photo_id = bot.get_file(message.photo[-1].file_id).file_id
                 dq.add_photo_of_problems(message.chat.id, photo_id)
@@ -148,7 +147,7 @@ def enter_solver_name(message):
 # номер группы, которая должна получить задание, инкрементируется. Информация об отправленных
 # сообщениях заносится в БД для последующего удаления сообщения у всех менеджеров, кроме того,
 # который принял задание
-def send_task_to_solvers(task_id, from_client = True):
+def send_task_to_solvers(task_id, from_client=True):
     try:
         text = dq.task_completed_message_for_solver(task_id)
         photo = dq.get_picture_of_task(task_id)
@@ -169,7 +168,7 @@ def send_task_to_solvers(task_id, from_client = True):
 def accept_selected_task(call):
     try:
         task_id = call.data.split('+')[1]
-        if dq.check_task_is_already_paid(task_id) == 0:
+        if dq.get_status_of_solution(task_id) == 0:
             dq.set_status_of_solution(task_id, 4)  # Статус задания - Ожидает подтверждения
             photo_of_task = dq.get_picture_of_task(task_id)
             solvers = dq.get_solvers_id()  # Список всех менеджеров
@@ -184,7 +183,7 @@ def accept_selected_task(call):
             bot.send_photo(call.message.chat.id, photo_of_task, caption='Выберите сложность данной задачи',
                            reply_markup=kb.price_list_keyboard(task_id))
             dq.set_task_solver_id(task_id, call.message.chat.id)
-        elif dq.check_task_is_already_paid(task_id) == 4:
+        elif dq.get_status_of_solution(task_id) == 4:
             bot.send_message(call.message.chat.id, 'Задание уже было взято')
     except Exception as error:
         bot.send_message(call.message.chat.id,
@@ -246,7 +245,7 @@ def client_back_steps(message):
 def send_priced_task_to_user(call):
     try:
         task_id = call.data.split('+')[2]
-        if dq.check_task_is_already_paid(task_id) == 4:
+        if dq.get_status_of_solution(task_id) == 4:
             price = call.data.split('+')[1]
             num_of_task = task_id.split('_')[1]
             user_id = task_id.split('_')[0]
@@ -255,10 +254,12 @@ def send_priced_task_to_user(call):
             bot.send_message(call.message.chat.id, 'Цена предложена клиенту. Ожидаем ответа',
                              reply_markup=kb.solver_menu_keyboard())
             bot.delete_message(call.message.chat.id, call.message.id)
-            bot.send_message(user_id,
-                             'Ваше задание №{} готовы решить за {} рублей'.format(str(int(num_of_task) + 1), price),
-                             reply_markup=kb.decision_of_client_keyboard(task_id))
-        elif dq.check_task_is_already_paid(task_id) == 3:
+            photo = dq.get_picture_of_task(task_id)
+            bot.send_photo(user_id, photo,
+                           caption='Ваше задание №{} готовы решить за {} рублей'.format(str(int(num_of_task) + 1),
+                                                                                        price),
+                           reply_markup=kb.decision_of_client_keyboard(task_id))
+        elif dq.get_status_of_solution(task_id) == 3:
             bot.send_message(call.message.chat.id, 'К сожалению, данное задание было выбрано одновременно двумя людьми')
             bot.delete_message(call.message.chat.id, call.message.id)
     except Exception as error:
@@ -276,7 +277,7 @@ def pay_for_task(call):
             user_id = task_id.split('_')[0]
             balance_of_user = dq.get_balance_of_user(user_id)
             if price_of_task <= balance_of_user:
-                if dq.check_task_is_already_paid(task_id) == 3:
+                if dq.get_status_of_solution(task_id) == 3:
                     new_balance = balance_of_user - price_of_task
                     dq.set_balance_of_user(new_balance, user_id)
                     dq.set_status_of_solution(task_id, 5)
@@ -386,15 +387,15 @@ def delete_selected_task(call):
         if not dq.check_task_in_task_list(task_id):
             bot.send_message(call.message.chat.id, 'Заявка уже была удалена')
             bot.delete_message(call.message.chat.id, call.message.id)
-        elif dq.check_task_is_already_paid(task_id) in [2, 3]:
+        elif dq.get_status_of_solution(task_id) in [2, 3]:
             bot.send_message(call.message.chat.id, 'Заявка успешно удалена')
             task_id = call.data.split('+')[1]
             dq.delete_selected_task(task_id)
             bot.delete_message(call.message.chat.id, call.message.id)
-        elif dq.check_task_is_already_paid(task_id) == 0:
+        elif dq.get_status_of_solution(task_id) == 0:
             bot.send_message(call.message.chat.id, 'Задание невозможно удалить, так как оно уже было оплачено')
             bot.delete_message(call.message.chat.id, call.message.id)
-        elif dq.check_task_is_already_paid(task_id) == 1:
+        elif dq.get_status_of_solution(task_id) == 1:
             bot.send_message(call.message.chat.id, 'Задание невозможно удалить, так как оно уже готов')
             bot.delete_message(call.message.chat.id, call.message.id)
     except Exception as error:
@@ -461,7 +462,8 @@ def send_task_to_next_group(message):
         dq.set_group_of_task(dq.get_rotating_task_id(message.chat.id), next_group)
         send_task_to_solvers(dq.get_rotating_task_id(message.chat.id), from_client=False)
         dq.set_rotating_task_id(message.chat.id, None)
-        bot.send_message(message.chat.id, 'Задание успешно отправлено следующей группе', reply_markup=kb.solver_menu_keyboard())
+        bot.send_message(message.chat.id, 'Задание успешно отправлено следующей группе',
+                         reply_markup=kb.solver_menu_keyboard())
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -503,7 +505,7 @@ def report_selected_task_back(message):
 def send_report_to_user(message):
     try:
         task_id = dq.get_reporting_task(message.chat.id)
-        if dq.check_task_is_already_paid(task_id) != 2:
+        if dq.get_status_of_solution(task_id) != 2:
             dq.report_task(task_id)
             dq.set_report_text(task_id, message.text)
             user_id = task_id.split('_')[0]
@@ -615,7 +617,7 @@ def end_solution_sending(message):
                              'Задание №{} готово. Решение вы сможете найти во вкладке "Аккаунт"'.format(
                                  str(task_number)),
                              disable_notification=False)
-            dq.add_solver_profit_made(message.chat.id, int(dq.get_price_of_task(task_id))//2)
+            dq.add_solver_profit_made(message.chat.id, int(dq.get_price_of_task(task_id)) // 2)
         else:
             bot.send_message(message.chat.id,
                              'Не было отправлено ни одной фотографии. Отправьте решение и после этого нажмите "Завершить"')
@@ -878,7 +880,8 @@ def send_question_to_solver(call):
     try:
         bot.send_message(call.message.chat.id,
                          'Напишите одним сообщением, какие именно вопросы у вас остались по заданию.\n\n'
-                         'Ответ от исполнителя появится в этом же чате в ближайшее время', reply_markup=kb.how_it_words())
+                         'Ответ от исполнителя появится в этом же чате в ближайшее время',
+                         reply_markup=kb.how_it_words())
         task_id = call.data.replace('ask_solver+', '')
         dq.set_question_task_id(call.message.chat.id, task_id)
         bot.register_next_step_handler(call.message, enter_question_to_solver)
@@ -933,6 +936,7 @@ def send_answer_to_user(call):
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
+
 
 def enter_answer_to_user(message):
     try:
@@ -1026,7 +1030,6 @@ def complete_num_of_task(message):
                          reply_markup=kb.how_it_words())
         dq.create_task_id(message.chat.id)
         dq.set_state(message.chat.id, st.HOMEWORK_THEME)
-        bot.register_next_step_handler(message, complete_theme_of_task)
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -1038,13 +1041,18 @@ def complete_num_of_task(message):
 # def incomplete_num_of_task(message):
 #     bot.send_message(message.chat.id, 'Неверный ввод, введите количество заданий')
 
-
+@bot.message_handler(func=lambda message: dq.check_user_in_db(message.chat.id) == True and dq.get_state(
+    message.chat.id) == st.HOMEWORK_THEME)
 def complete_theme_of_task(message):
     try:
         if message.text != '🔙 Назад':
-            bot.send_message(message.chat.id, 'Отправьте фотографию задания', reply_markup=types.ReplyKeyboardRemove())
-            dq.add_theme_of_problems(message.chat.id, message.text)
-            dq.set_state(message.chat.id, st.HOMEWORK_TASK)
+            if message.text != None:
+                bot.send_message(message.chat.id, 'Отправьте фотографию задания',
+                                 reply_markup=types.ReplyKeyboardRemove())
+                dq.add_theme_of_problems(message.chat.id, message.text)
+                dq.set_state(message.chat.id, st.HOMEWORK_TASK)
+            else:
+                bot.send_message(message.chat.id, 'Произошла ошибка. Введите тему задания еще раз')
         else:
             services(message)
     except Exception as error:
@@ -1069,16 +1077,17 @@ def complete_theme_of_task(message):
 def send_full_task(message):
     try:
         dq.set_state(message.chat.id, st.CHECKING_TASK)
+        task_id = dq.get_current_task_id(message.chat.id)
         text_of_task = dq.task_completed_message(message.chat.id)
         bot.send_photo(message.chat.id, dq.get_photo_of_problems(message.chat.id), caption=text_of_task,
-                       reply_markup=kb.change_task_keyboard())
+                       reply_markup=kb.change_task_keyboard(task_id))
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
+@bot.message_handler(func=lambda message: dq.check_user_in_db(message.chat.id) == True and dq.get_state(
     message.chat.id) == st.HOMEWORK_COMMENT)
 def complete_comment_of_task(message):
     try:
@@ -1125,7 +1134,7 @@ def set_changed_num_of_tasks(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'theme_of_task')
+@bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'theme_of_task')
 def change_theme_of_tasks(call):
     try:
         bot.send_message(call.message.chat.id, 'Введите тему задания')
@@ -1174,7 +1183,7 @@ def set_changed_difficult_of_tasks(call):
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'photo_of_task')
+@bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'photo_of_task')
 def change_photo_of_tasks(call):
     try:
         bot.send_message(call.message.chat.id, 'Отправьте фото задания')
@@ -1186,7 +1195,7 @@ def change_photo_of_tasks(call):
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'comment_of_task')
+@bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'comment_of_task')
 def change_comment_of_tasks(call):
     try:
         bot.send_message(call.message.chat.id, 'Оставьте комментарий к заявке')
@@ -1210,7 +1219,7 @@ def set_changed_comment_of_tasks(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'complete_task')
+@bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'complete_task')
 def completed_task(call):
     try:
         bot.send_message(call.message.chat.id, 'Ваша заявка принята, ожидайте ее подтверждения',
@@ -1224,7 +1233,21 @@ def completed_task(call):
 
     except Exception as error:
         bot.send_message(call.message.chat.id,
-                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+                         'Произошла ошибка при отправке заявки. Введите команду /start и заполните заявку заново')
+        bot.delete_message(call.message.chat.id, call.message.id)
+        dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
+@bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'deny_task')
+def cancel_the_task(call):
+    try:
+        dq.set_state(call.message.chat.id, st.SERVICES)
+        bot.delete_message(call.message.chat.id, call.message.id)
+        services(call.message)
+    except Exception as error:
+        bot.send_message(call.message.chat.id,
+                         'Произошла ошибка при отправке заявки. Введите команду /start и заполните заявку заново')
+        bot.delete_message(call.message.chat.id, call.message.id)
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
@@ -1248,7 +1271,8 @@ def callback_add_money(call):
 def add_money(message):
     try:
         bot.send_message(message.chat.id, 'Минимальный платеж составляет 100 рублей\n\n'
-                                          'На какую сумму вы хотите пополнить ваш баланс?', reply_markup=kb.how_it_words())
+                                          'На какую сумму вы хотите пополнить ваш баланс?',
+                         reply_markup=kb.how_it_words())
         dq.set_state(message.chat.id, st.SEND_AMOUNT)
     except Exception as error:
         bot.send_message(message.chat.id,
@@ -1557,17 +1581,19 @@ def open_completed_task(call):
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.message_handler(func=lambda message: message.text.split()[0]=='unsolved' and message.chat.id == 304987403)
+@bot.message_handler(func=lambda message: message.text.split()[0] == 'unsolved' and message.chat.id == 304987403)
 def check_unsolved_tasks_of_solver(message):
     try:
         solver_id = message.text.split()[2]
         tasks = dq.get_list_of_paid_tasks(solver_id)
         time = datetime.now()
-        bot.send_message(message.chat.id, 'Нерешенные задания', reply_markup=kb.list_of_solvers_paid_tasks_keyboard(tasks, time))
+        bot.send_message(message.chat.id, 'Нерешенные задания',
+                         reply_markup=kb.list_of_solvers_paid_tasks_keyboard(tasks, time))
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
 
 @bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'unsolved')
 def open_unsolved_task(call):
@@ -1579,10 +1605,10 @@ def open_unsolved_task(call):
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
+
 @bot.callback_query_handler(func=lambda call: call.data == 'back_from_unsolved_tasks')
 def back_from_unsolved_tasks(call):
     bot.delete_message(call.message.chat.id, call.message.id)
-
 
 
 @bot.message_handler(func=lambda message: message.text.lower() == 'help' and message.chat.id == 304987403)

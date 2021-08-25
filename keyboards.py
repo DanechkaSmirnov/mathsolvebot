@@ -79,15 +79,14 @@ def difficulty_keyboard():
     return keyboard
 
 
-def change_task_keyboard():
+def change_task_keyboard(task_id):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     keyboard_buttons = []
-    # keyboard_buttons.append(
-        # types.InlineKeyboardButton(text='Изменить количество заданий', callback_data='num_of_tasks'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='📖 Изменить тему ', callback_data='theme_of_task'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='📷 Изменить фото', callback_data='photo_of_task'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='📋 Изменить комментарий', callback_data='comment_of_task'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='✅ Отправить задание', callback_data='complete_task'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='📖 Изменить тему ', callback_data=f'theme_of_task+{task_id}'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='📷 Изменить фото', callback_data=f'photo_of_task+{task_id}'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='📋 Изменить комментарий', callback_data=f'comment_of_task+{task_id}'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='❌ Отменить отправку', callback_data=f'deny_task+{task_id}'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='✅ Отправить задание', callback_data=f'complete_task+{task_id}'))
     keyboard.add(*keyboard_buttons)
     return keyboard
 

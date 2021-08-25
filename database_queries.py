@@ -279,6 +279,15 @@ def complete_task(user_id):
         con.close()
         print('complete_task_error')
 
+def get_current_task_id(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    num_of_tasks = cursor.execute("SELECT number_of_tasks FROM client WHERE user_id = (?)", (user_id,)).fetchone()[
+        0]
+    task_id = str(user_id) + '_' + str(num_of_tasks)
+    con.commit()
+    con.close()
+    return task_id
 
 def task_completed_message(user_id):
     text_of_task = ''
@@ -347,6 +356,15 @@ def check_photo_of_task(user_id):
     con.close()
     return True
 
+def check_name_of_user(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT name FROM client WHERE user_id = (?)", (user_id,)).fetchone()
+    if a[0] == None:
+        con.close()
+        return False
+    con.close()
+    return True
 
 
 def set_solver_state(user_id, state):
@@ -921,7 +939,7 @@ def delete_all_photos_of_solution(task_id):
         print(error)
 
 
-def check_task_is_already_paid(task_id):
+def get_status_of_solution(task_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT status_of_solution FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
