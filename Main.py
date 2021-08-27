@@ -15,38 +15,38 @@ import inspect
 bot = telebot.TeleBot(API_TOKEN, threaded=False)
 
 
-# WEBHOOK_HOST = '194.67.105.41'
-# WEBHOOK_PORT = 443  # 443, 80, 88 or 8443 (port need to be 'open')
-# WEBHOOK_LISTEN = '0.0.0.0'  # In some VPS you may need to put here the IP addr
-#
-# WEBHOOK_SSL_CERT = '/etc/ssl/danny/server.crt'  # Path to the ssl certificate
-# WEBHOOK_SSL_PRIV = '/etc/ssl/danny/server.pass.key'  # Path to the ssl private key
-#
-# WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
-# WEBHOOK_URL_PATH = "/%s/" % (API_TOKEN)
-#
-# logger = telebot.logger
-# telebot.logger.setLevel(logging.INFO)
-#
-# app = flask.Flask(__name__)
-#
-#
-# # Empty webserver index, return nothing, just http 200
-# @app.route('/', methods=['GET', 'HEAD'])
-# def index():
-#     return ''
-#
-#
-# # Process webhook calls
-# @app.route(WEBHOOK_URL_PATH, methods=['POST'])
-# def webhook():
-#     if flask.request.headers.get('content-type') == 'application/json':
-#         json_string = flask.request.get_data().decode('utf-8')
-#         update = telebot.types.Update.de_json(json_string)
-#         bot.process_new_updates([update])
-#         return ''
-#     else:
-#         flask.abort(403)
+WEBHOOK_HOST = '194.67.105.41'
+WEBHOOK_PORT = 443  # 443, 80, 88 or 8443 (port need to be 'open')
+WEBHOOK_LISTEN = '0.0.0.0'  # In some VPS you may need to put here the IP addr
+
+WEBHOOK_SSL_CERT = '/etc/ssl/danny/server.crt'  # Path to the ssl certificate
+WEBHOOK_SSL_PRIV = '/etc/ssl/danny/server.pass.key'  # Path to the ssl private key
+
+WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
+WEBHOOK_URL_PATH = "/%s/" % (API_TOKEN)
+
+logger = telebot.logger
+telebot.logger.setLevel(logging.INFO)
+
+app = flask.Flask(__name__)
+
+
+# Empty webserver index, return nothing, just http 200
+@app.route('/', methods=['GET', 'HEAD'])
+def index():
+    return ''
+
+
+# Process webhook calls
+@app.route(WEBHOOK_URL_PATH, methods=['POST'])
+def webhook():
+    if flask.request.headers.get('content-type') == 'application/json':
+        json_string = flask.request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return ''
+    else:
+        flask.abort(403)
 
 
 # Если пользователь находится в черном списке - pass
@@ -83,6 +83,9 @@ def complete_photo_of_task(message):
             if dq.get_solver_state(message.chat.id) == st.solver_SENDING_SOLUTION:
                 photo = bot.get_file(message.photo[-1].file_id).file_id
                 dq.add_photo_of_solution(message.chat.id, photo)
+            if dq.get_solver_state(message.chat.id) == st.solver_FIXING_TASK:
+                photo = bot.get_file(message.photo[-1].file_id).file_id
+                dq.add_photo_of_fixing_solution(message.chat.id, photo)
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -134,10 +137,14 @@ def solver_registration(message):
 # Функция добавляет имя менеджера в базу данных
 def enter_solver_name(message):
     try:
-        dq.set_solver_name(message.chat.id, message.text)
-        bot.send_message(message.chat.id, 'Привет, ' + dq.get_solver_name(message.chat.id),
-                         reply_markup=kb.solver_menu_keyboard())
-        dq.set_solver_state(message.chat.id, st.solver_MAIN)
+        if message.text != None:
+            dq.set_solver_name(message.chat.id, message.text)
+            bot.send_message(message.chat.id, 'Привет, ' + dq.get_solver_name(message.chat.id),
+                             reply_markup=kb.solver_menu_keyboard())
+            dq.set_solver_state(message.chat.id, st.solver_MAIN)
+        else:
+            bot.send_message(message.chat.id, 'Имя введено неверно, повторите')
+            bot.register_next_step_handler(message, enter_solver_name)
     except Exception as error:
         bot.send_message(message.chat.id, 'Имя введено неверно, повторите')
         bot.register_next_step_handler(message, enter_solver_name)
@@ -326,6 +333,19 @@ def send_task_of_unpaid_list_to_solver(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
+@bot.message_handler(func=lambda message: message.text == 'Список решенных задач')
+def send_task_of_unpaid_list_to_solver(message):
+    try:
+        if dq.check_solver_in_db(message.chat.id):
+            list_of_tasks = dq.get_list_of_solved_task(message.chat.id)
+            bot.send_message(message.chat.id, 'Список решенных задач за последние сутки',
+                             reply_markup=kb.list_of_completed_tasks_keyboard(list_of_tasks))
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
 @bot.callback_query_handler(func=lambda call: call.data == 'back_from_paid_tasks')
 def back_from_list_of_paid_tasks(call):
     try:
@@ -485,6 +505,25 @@ def rotate_selected_task_back(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
+@bot.message_handler(func=lambda message: message.text == 'Отмена' and dq.check_solver_in_db(message.chat.id)
+                      and dq.get_solver_state(message.chat.id) == st.solver_FIXING_TASK)
+def back_from_sending_fixed_tasks(message):
+    try:
+        task_id = dq.get_fixing_task_id(message.chat.id)
+        num_of_photos = int(dq.count_num_solution_photos(task_id))
+        num_of_fixed_photos = int(dq.get_num_of_fixed_photos_sended(message.chat.id))
+        dq.set_solver_state(message.chat.id, st.solver_MAIN)
+        for i in range(num_of_fixed_photos):
+            dq.delete_single_photo_of_solution(f'{task_id}_{num_of_photos-i-1}')
+        solver_stats(message)
+        dq.set_num_of_fixed_photos_sended(message.chat.id, 0)
+        dq.refresh_num_of_sended_photos(message.chat.id)
+
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
 @bot.message_handler(func=lambda message: message.text == 'Назад' and dq.check_solver_in_db(
     message.chat.id) == True and dq.get_solver_state(
     message.chat.id) == st.solver_GET_REPORT_MESSAGE)
@@ -602,7 +641,7 @@ def cancel_sending_photos_of_solution(message):
 def end_solution_sending(message):
     try:
         task_id = dq.get_current_task(message.chat.id)
-        num_of_photos = dq.get_num_of_sended_photos(task_id)
+        num_of_photos = dq.count_num_solution_photos(task_id)
         if num_of_photos != 0:
             bot.send_message(message.chat.id, 'Решение успешно отправлено', reply_markup=kb.solver_menu_keyboard())
             dq.set_current_task(message.chat.id, None)
@@ -625,6 +664,31 @@ def end_solution_sending(message):
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
+@bot.message_handler(func=lambda message: message.text.lower() == 'завершить' and dq.check_solver_in_db(
+    message.chat.id) == True and dq.get_solver_state(
+    message.chat.id) == st.solver_FIXING_TASK)
+def end_fixing_solution(message):
+    try:
+        num_of_fixed_photos = dq.get_num_of_fixed_photos_sended(message.chat.id)
+        if num_of_fixed_photos != 0:
+            task_id = dq.get_fixing_task_id(message.chat.id)
+            bot.send_message(message.chat.id, 'Исправленные фотографии успешно добавлены', reply_markup=kb.solver_menu_keyboard())
+            dq.set_solver_state(message.chat.id, st.solver_MAIN)
+            dq.refresh_num_of_sended_photos(message.chat.id)
+            dq.set_num_of_fixed_photos_sended(message.chat.id, 0)
+            user_id = task_id.split('_')[0]
+            task_number = int(task_id.split('_')[1]) + 1
+            bot.send_message(user_id, f'Задание №{task_number} было исправлено. Проверьте решение во вкладке "Аккаунт"')
+
+        else:
+            bot.send_message(message.chat.id, 'Не было отправлено ни одной фотографии. Повторите попытку')
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
 
 
 @bot.message_handler(
@@ -845,7 +909,8 @@ def open_selected_task(call):
                     bot.send_media_group(call.message.chat.id, array_of_photos)
 
                 bot.send_message(call.message.chat.id,
-                                 'Если у вас остались вопросы по решению, вы можете задать их исполнителю'
+                                 'Если у Вас остались вопросы по решению или Вы нашли в задании ошибку - '
+                                 'смело пишите исполнителю, и в скором времени мы все исправим!'
                                  , reply_markup=kb.send_message_to_solver(task_id))
 
             if task[1] == 0:
@@ -866,6 +931,9 @@ def open_selected_task(call):
             if task[1] == 5:
                 photo = dq.get_picture_of_task(task_id)
                 bot.send_photo(call.message.chat.id, photo, caption='Задание скоро будет выполнено')
+
+            if task[1] == 6:
+                bot.send_message(call.message.chat.id, 'Задание было удалено')
         else:
             bot.send_message(call.message.chat.id, 'Задание было удалено')
 
@@ -893,31 +961,37 @@ def send_question_to_solver(call):
 
 def enter_question_to_solver(message):
     try:
-        if message.text == '🔙 Назад':
-            account(message)
-        else:
-            task_id = dq.get_question_task_id(message.chat.id)
-            solver_id = dq.get_solver_of_task(task_id)
-            photo_of_task = dq.get_picture_of_task(task_id)
-            photos_of_solution = dq.get_all_photos_of_solution(task_id)
-            array_of_photos = []
-            array_of_photos.append(types.InputMediaPhoto(media=photo_of_task))
-            for i in range(len(photos_of_solution) - 1):
-                array_of_photos.append(types.InputMediaPhoto(media=photos_of_solution[i][0]))
-            array_of_photos.append(
-                types.InputMediaPhoto(media=photos_of_solution[len(photos_of_solution) - 1][0], caption=message.text))
-            if len(array_of_photos) <= 10:
-                bot.send_media_group(solver_id, array_of_photos)
+        if message.text != None:
+            if message.text == '🔙 Назад':
+                account(message)
             else:
-                while len(array_of_photos) > 10:
-                    send_ten_photos = array_of_photos[:10]
-                    array_of_photos = array_of_photos[10:]
-                    bot.send_media_group(solver_id, send_ten_photos)
-                bot.send_media_group(solver_id, array_of_photos)
-            bot.send_message(solver_id, 'ВНИМАНИЕ, ВОПРОС\n\nОтветьте на него так, чтобы клиенту все было понятно',
-                             reply_markup=kb.answer_clients_question(task_id))
-            bot.send_message(message.chat.id, 'Вопрос успешно доставлен. Скоро вам ответят',
-                             reply_markup=kb.account_keyboard())
+                task_id = dq.get_question_task_id(message.chat.id)
+                solver_id = dq.get_solver_of_task(task_id)
+                photo_of_task = dq.get_picture_of_task(task_id)
+                photos_of_solution = dq.get_all_photos_of_solution(task_id)
+                array_of_photos = []
+                array_of_photos.append(types.InputMediaPhoto(media=photo_of_task))
+                for i in range(len(photos_of_solution) - 1):
+                    array_of_photos.append(types.InputMediaPhoto(media=photos_of_solution[i][0]))
+                array_of_photos.append(
+                    types.InputMediaPhoto(media=photos_of_solution[len(photos_of_solution) - 1][0],
+                                          caption=message.text))
+                if len(array_of_photos) <= 10:
+                    bot.send_media_group(solver_id, array_of_photos)
+                else:
+                    while len(array_of_photos) > 10:
+                        send_ten_photos = array_of_photos[:10]
+                        array_of_photos = array_of_photos[10:]
+                        bot.send_media_group(solver_id, send_ten_photos)
+                    bot.send_media_group(solver_id, array_of_photos)
+                bot.send_message(solver_id, 'ВНИМАНИЕ, ВОПРОС\n\nОтветьте на него так, чтобы клиенту все было понятно',
+                                 reply_markup=kb.answer_clients_question(task_id))
+                bot.send_message(message.chat.id, 'Вопрос успешно доставлен. Скоро вам ответят',
+                                 reply_markup=kb.account_keyboard())
+        else:
+            bot.send_message(message.chat.id, 'К сожалению, в настоящий момент фотографии в вопросе отправлять нельзя. '
+                                              'Пожалуйста, задайте вопрос еще раз')
+            bot.register_next_step_handler(message, enter_question_to_solver)
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -940,28 +1014,32 @@ def send_answer_to_user(call):
 
 def enter_answer_to_user(message):
     try:
-        if message.text == 'Назад':
-            solver_stats(message)
-            dq.set_solver_state(message.chat.id, st.solver_MAIN)
-        else:
-            task_id = dq.get_answer_task_id(message.chat.id)
-            user_id = task_id.split('_')[0]
-            photos_of_solution = dq.get_all_photos_of_solution(task_id)
-            array_of_photos = []
-            for i in range(len(photos_of_solution) - 1):
-                array_of_photos.append(types.InputMediaPhoto(media=photos_of_solution[i][0]))
-            array_of_photos.append(
-                types.InputMediaPhoto(media=photos_of_solution[len(photos_of_solution) - 1][0],
-                                      caption='Ответ на ваш вопрос:\n\n' + message.text))
-            if len(array_of_photos) <= 10:
-                bot.send_media_group(user_id, array_of_photos)
+        if message.text != None:
+            if message.text == 'Назад':
+                solver_stats(message)
+                dq.set_solver_state(message.chat.id, st.solver_MAIN)
             else:
-                while len(array_of_photos) > 10:
-                    send_ten_photos = array_of_photos[:10]
-                    array_of_photos = array_of_photos[10:]
-                    bot.send_media_group(user_id, send_ten_photos)
-                bot.send_media_group(user_id, array_of_photos)
-            bot.send_message(message.chat.id, 'Ответ успешно отправлен', reply_markup=kb.solver_menu_keyboard())
+                task_id = dq.get_answer_task_id(message.chat.id)
+                user_id = task_id.split('_')[0]
+                photos_of_solution = dq.get_all_photos_of_solution(task_id)
+                array_of_photos = []
+                for i in range(len(photos_of_solution) - 1):
+                    array_of_photos.append(types.InputMediaPhoto(media=photos_of_solution[i][0]))
+                array_of_photos.append(
+                    types.InputMediaPhoto(media=photos_of_solution[len(photos_of_solution) - 1][0],
+                                          caption='Ответ на ваш вопрос:\n\n' + message.text))
+                if len(array_of_photos) <= 10:
+                    bot.send_media_group(user_id, array_of_photos)
+                else:
+                    while len(array_of_photos) > 10:
+                        send_ten_photos = array_of_photos[:10]
+                        array_of_photos = array_of_photos[10:]
+                        bot.send_media_group(user_id, send_ten_photos)
+                    bot.send_media_group(user_id, array_of_photos)
+                bot.send_message(message.chat.id, 'Ответ успешно отправлен', reply_markup=kb.solver_menu_keyboard())
+        else:
+            bot.send_message(message.chat.id, 'Фотографии отправлять нельзя. Напишите текст ответа еще раз')
+            bot.register_next_step_handler(message, enter_answer_to_user)
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
@@ -997,28 +1075,6 @@ def services(message):
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
-
-
-# Homework
-
-# @bot.message_handler(func=lambda message: dq.check_solver_in_db(message.chat.id) == False and dq.get_state(
-#     message.chat.id) == st.SERVICES and message.text == '📍 Оставить заявку')
-# def create_task(message):
-#     try:
-#         bot.send_message(message.chat.id, 'Введите количество заданий',
-#                          reply_markup=telebot.types.ReplyKeyboardRemove())
-#         dq.create_task_id(message.chat.id)
-#         dq.set_state(message.chat.id, st.HOMEWORK_NUMBER)
-#     except Exception as error:
-#         bot.send_message(message.chat.id,
-#                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!'+str(inspect.stack()[0][3]))
-#
-#
-# def check_isdigit(message):
-#     if type(message) == str:
-#         if str.isdigit(message) == True:
-#             return True
-#     return False
 
 
 @bot.message_handler(func=lambda message: message.text == '📍 Оставить заявку' and dq.check_solver_in_db(
@@ -1158,18 +1214,6 @@ def set_changed_theme_of_tasks(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-@bot.callback_query_handler(func=lambda call: call.data == 'difficult_of_task')
-def change_difficult_of_tasks(call):
-    try:
-        bot.send_message(call.message.chat.id, 'Выберите сложность задания', reply_markup=kb.difficulty_keyboard())
-        dq.set_state(call.message.chat.id, st.CHANGE_DIFFICULT)
-        bot.delete_message(call.message.chat.id, call.message.id)
-    except Exception as error:
-        bot.send_message(call.message.chat.id,
-                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
-        dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
-
-
 @bot.callback_query_handler(func=lambda call: dq.check_solver_in_db(call.message.chat.id) == False and dq.get_state(
     call.message.chat.id) == st.CHANGE_DIFFICULT)
 def set_changed_difficult_of_tasks(call):
@@ -1226,6 +1270,10 @@ def completed_task(call):
                          reply_markup=kb.menu_keyboard())
         task_id = dq.complete_task(call.message.chat.id)
         num_of_group = dq.get_current_group()
+        if dq.get_num_of_solvers_of_selected_group(num_of_group) == 0:
+            while dq.get_num_of_solvers_of_selected_group(num_of_group) == 0:
+                dq.increment_current_group()
+                num_of_group = dq.get_current_group()
         dq.set_group_of_task(task_id, num_of_group)
         send_task_to_solvers(task_id)
         dq.set_state(call.message.chat.id, st.MAIN)
@@ -1235,6 +1283,7 @@ def completed_task(call):
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка при отправке заявки. Введите команду /start и заполните заявку заново')
         bot.delete_message(call.message.chat.id, call.message.id)
+        dq.set_state(call.message.chat.id, st.MAIN)
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
@@ -1248,6 +1297,7 @@ def cancel_the_task(call):
         bot.send_message(call.message.chat.id,
                          'Произошла ошибка при отправке заявки. Введите команду /start и заполните заявку заново')
         bot.delete_message(call.message.chat.id, call.message.id)
+        dq.set_state(call.message.chat.id, st.MAIN)
         dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
@@ -1482,6 +1532,17 @@ def today_payments(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
+@bot.message_handler(func=lambda message: 'set num of groups' in message.text.lower() and message.chat.id == 304987403)
+def set_number_of_groups(message):
+    try:
+        num_of_groups = int(message.text.split()[-1])
+        dq.set_number_of_groups(num_of_groups)
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
 @bot.message_handler(func=lambda message: 'set group' in message.text.lower() and message.chat.id == 304987403)
 def set_num_of_group(message):
     try:
@@ -1512,14 +1573,23 @@ def open_solution_of_selected_task(task_id, message):
             task = dq.select_task(task_id)
             if task[1] == 1:
                 photos = dq.get_all_photos_of_solution(task_id)
+                solver_id = dq.get_solver_of_task(task_id)
+                name = dq.get_solver_name(solver_id)
+                price = dq.get_price_of_task(task_id)
+                time_of_solution = dq.get_solution_time(task_id)
+                time_of_accept = dq.get_time_of_accept(task_id)
+                delay = datetime.strptime(time_of_solution, "%Y-%m-%d %H:%M:%S") - datetime.strptime(time_of_accept,
+                                                                                                     "%Y-%m-%d %H:%M:%S")
+                minutes = str(
+                    delay.seconds % 3600 // 60) if delay.seconds % 3600 // 60 >= 10 else f'0{delay.seconds % 3600 // 60}'
+                hours = delay.seconds // 3600
                 array_of_photos = []
                 for i in range(len(photos) - 1):
                     array_of_photos.append(types.InputMediaPhoto(media=photos[i][0]))
                 array_of_photos.append(types.InputMediaPhoto(media=photos[len(photos) - 1][0], caption='Решение'))
-                solver_id = dq.get_solver_of_task(task_id)
-                name = dq.get_solver_name(solver_id)
-                price = dq.get_price_of_task(task_id)
-                bot.send_photo(message.chat.id, photo_of_task, caption=f'{name} решил задание за {price} рублей')
+                bot.send_photo(message.chat.id, photo_of_task, caption=f'Менеджер: {name}\nЦена: {price} рублей'
+                                                                       f'\nВремя выполнение: {hours}:{minutes}\n'
+                                                                       f'Id задания: {task_id}')
                 if len(array_of_photos) <= 10:
                     bot.send_media_group(message.chat.id, array_of_photos)
                 else:
@@ -1595,6 +1665,35 @@ def check_unsolved_tasks_of_solver(message):
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
+@bot.message_handler(func=lambda message: message.text == 'group list' and message.chat.id == 304987403)
+def send_list_of_solvers_by_groups(message):
+    try:
+        text = dq.get_list_of_solvers_by_groups()
+        bot.send_message(message.chat.id, text)
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
+@bot.message_handler(func=lambda message: message.text == 'new group' and message.chat.id == 304987403)
+def increment_num_of_groups(message):
+    try:
+        num_of_groups = dq.get_num_of_groups()
+        num_of_solvers = dq.get_num_of_solvers_of_selected_group(num_of_groups)
+        if num_of_solvers == 0:
+            bot.send_message(message.chat.id, 'Нет работников в следующей группе. Сначала добавьте работников, '
+                                              'а потом расширяйте группу')
+        else:
+            dq.increment_num_of_groups()
+            bot.send_message(message.chat.id, f'{num_of_groups} группа успешно добавлена')
+
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
 @bot.callback_query_handler(func=lambda call: call.data.split('+')[0] == 'unsolved')
 def open_unsolved_task(call):
     try:
@@ -1608,7 +1707,83 @@ def open_unsolved_task(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == 'back_from_unsolved_tasks')
 def back_from_unsolved_tasks(call):
-    bot.delete_message(call.message.chat.id, call.message.id)
+    try:
+        bot.delete_message(call.message.chat.id, call.message.id)
+    except Exception as error:
+        bot.send_message(call.message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(call.message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
+@bot.message_handler(func=lambda message: 'delete solver' in message.text.lower() and message.chat.id == 304987403)
+def delete_solver_from_db(message):
+    try:
+        solver_id = message.text.split()[2]
+        dq.delete_solver_from_db(solver_id)
+        bot.send_message(message.chat.id, 'Менеджер удален из базы данных')
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+
+@bot.message_handler(func=lambda message: 'fix' in message.text.lower() and dq.check_solver_in_db(message.chat.id))
+def fix_photos_of_tasks(message):
+    try:
+        task_id = message.text.split()[1]
+        photo_of_task = dq.get_picture_of_task(task_id)
+        photos_of_solution = dq.get_all_photos_of_solution(task_id)
+        array_of_photos = []
+        for i in range(len(photos_of_solution) - 1):
+            array_of_photos.append(types.InputMediaPhoto(media=photos_of_solution[i][0]))
+        array_of_photos.append(types.InputMediaPhoto(media=photos_of_solution[len(photos_of_solution) - 1][0], caption='Решение'))
+        bot.send_photo(message.chat.id, photo_of_task, caption='Задание')
+        if len(array_of_photos) <= 10:
+            bot.send_media_group(message.chat.id, array_of_photos)
+        else:
+            while len(array_of_photos) > 10:
+                send_ten_photos = array_of_photos[:10]
+                array_of_photos = array_of_photos[10:]
+                bot.send_media_group(message.chat.id, send_ten_photos)
+            bot.send_media_group(message.chat.id, array_of_photos)
+        bot.send_message(message.chat.id, 'Если в решении есть ошибки - исправьте их и добавьте фотографии правильного решения',
+                         reply_markup=kb.fixing_keyboard(task_id))
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+        dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
+
+@bot.callback_query_handler(func=lambda call: call.data == 'fix_close')
+def back_from_fixing_task(call):
+    try:
+        bot.delete_message(call.message.chat.id, call.message.id)
+    except Exception as error:
+        bot.send_message(call.message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+
+@bot.callback_query_handler(func=lambda call: 'fix+' in call.data)
+def send_fixed_photos_of_solutions(call):
+    try:
+        task_id = call.data.split('+')[1]
+        bot.send_message(call.message.chat.id, 'Отправляйте фотографии по одной, в конце нажмите на кнопку "Завершить"',
+                         reply_markup=kb.sending_photos_of_solution_keyboard())
+        dq.set_solver_state(call.message.chat.id, st.solver_FIXING_TASK)
+        dq.set_fixing_task_id(call.message.chat.id, task_id)
+        bot.delete_message(call.message.chat.id, call.message.id)
+        num_of_sended_photos = dq.count_num_solution_photos(task_id)
+        dq.set_num_of_current_sended_photos(call.message.chat.id, num_of_sended_photos)
+    except Exception as error:
+        bot.send_message(call.message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
+
+@bot.message_handler(func=lambda message: message.text == 'group stats' and message.chat.id == 304987403)
+def stats_by_group(message):
+    try:
+        text = dq.get_statistics_by_group()
+        bot.send_message(message.chat.id, text)
+    except Exception as error:
+        bot.send_message(message.chat.id,
+                         'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
 
 
 @bot.message_handler(func=lambda message: message.text.lower() == 'help' and message.chat.id == 304987403)
@@ -1624,23 +1799,33 @@ def admin_help(message):
                                           '7) stats - статистика за последние два дня\n'
                                           '8) new users today - количество новых клиентов сегодня \n'
                                           '9) on balance - сумма денег на балансах пользователей\n'
-                                          '10) today payments - сумма сегодняшних транзакций'
-                                          '11) set group [solver_id] [group] - назначить группу менеджеру'
-                                          '12) show [task_id] - показать информацию о задании'
-                                          '13) solved task [solver_id] - решенные задачи за последний день'
-                                          '14) unsolved task [solver_id] - нерешенные задачи')
+                                          '10) today payments - сумма сегодняшних транзакций\n'
+                                          '11) set group [solver_id] [group] - назначить группу менеджеру\n'
+                                          '12) show [task_id] - показать информацию о задании\n'
+                                          '13) solved task [solver_id] - решенные задачи за последний день\n'
+                                          '14) unsolved task [solver_id] - нерешенные задачи\n'
+                                          '15) group list - список менеджеров по группам\n'
+                                          '16) new group - добавление новой группы под номером n+1\n'
+                                          '17) set num of group [num_of_groups] - изменить количество групп\n'
+                                          '18) delete solver [solver_id] - удалить работника из БД \n'
+                                          '19) fix [task_id] - добавление фотографий решения\n'
+                                          '20) group stats - статистика по каждой группе')
     except Exception as error:
         bot.send_message(message.chat.id,
                          'Произошла ошибка. \nВведите команду /start, чтобы вернуться в начало \nМы скоро все исправим!')
         dq.add_error_to_error_list(message.chat.id, str(inspect.stack()[0][3]), str(error))
 
 
-# bot.remove_webhook()
-#
-# time.sleep(0.1)
-#
-# # Set webhook
-# bot.set_webhook(url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH,
-#                 certificate=open(WEBHOOK_SSL_CERT, 'r'))
 
-bot.infinity_polling()
+
+
+
+bot.remove_webhook()
+
+time.sleep(0.1)
+
+# Set webhook
+bot.set_webhook(url=WEBHOOK_URL_BASE + WEBHOOK_URL_PATH,
+                certificate=open(WEBHOOK_SSL_CERT, 'r'))
+
+# bot.infinity_polling()

@@ -69,14 +69,6 @@ def homework_keyboard():
     return keyboard
 
 
-def difficulty_keyboard():
-    keyboard = types.InlineKeyboardMarkup(row_width=4)
-    keyboard_buttons = []
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Легкий', callback_data='easy'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Средний', callback_data='medium'))
-    keyboard_buttons.append(types.InlineKeyboardButton(text='Сложный', callback_data='hard'))
-    keyboard.add(*keyboard_buttons)
-    return keyboard
 
 
 def change_task_keyboard(task_id):
@@ -113,6 +105,8 @@ def set_of_tasks_keyboard(tasks, page=1):
             text_button = 'Задание {}: Ожидает оплаты'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
         if task[1] == 5:
             text_button = 'Задание {}: Готовится'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
+        if task[1] == 6:
+            text_button = 'Задание {}: Удалено'.format(1 + int(task[0][1 + str.find(task[0], '_'):]))
         keyboard_buttons.append(types.InlineKeyboardButton(text=text_button, callback_data=('task_' + str(task[0]))))
     keyboard_buttons = [[i] for i in keyboard_buttons]
     arrows = []
@@ -135,6 +129,14 @@ def open_task_keyboard():
     keyboard.add(*keyboard_buttons)
     return keyboard
 
+def fixing_keyboard(task_id):
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    keyboard_buttons = []
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Добавить фотографии', callback_data=f'fix+{task_id}'))
+    keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=f'fix_close'))
+    keyboard.add(*keyboard_buttons)
+    return keyboard
+
 
 def solver_menu_keyboard():
     keyboard = types.ReplyKeyboardMarkup(row_width=1)
@@ -142,6 +144,8 @@ def solver_menu_keyboard():
     keyboard_buttons.append(types.KeyboardButton(text='Статистика'))
     keyboard_buttons.append(types.KeyboardButton(text='Список оплаченных задач'))
     keyboard_buttons.append(types.KeyboardButton(text='Список неоплаченных задач'))
+    keyboard_buttons.append(types.KeyboardButton(text='Список решенных задач'))
+
 
     # if status == True:
     #     keyboard_buttons.append(types.KeyboardButton(text='Online✅'))
@@ -281,6 +285,8 @@ def list_of_completed_tasks_keyboard(tasks):
     keyboard_buttons.append(types.InlineKeyboardButton(text='Назад', callback_data=('completed_close')))
     keyboard.add(*keyboard_buttons)
     return keyboard
+
+
 
 def send_message_to_solver(task_id):
     keyboard = types.InlineKeyboardMarkup(row_width=1)

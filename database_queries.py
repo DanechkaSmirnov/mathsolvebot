@@ -279,6 +279,7 @@ def complete_task(user_id):
         con.close()
         print('complete_task_error')
 
+
 def get_current_task_id(user_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
@@ -288,6 +289,7 @@ def get_current_task_id(user_id):
     con.commit()
     con.close()
     return task_id
+
 
 def task_completed_message(user_id):
     text_of_task = ''
@@ -300,14 +302,13 @@ def task_completed_message(user_id):
 def select_set_of_task(user_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    tasks = cursor.execute("SELECT task_id, status_of_solution, date_of_creating FROM (SELECT * FROM tasks ORDER BY date_of_creating DESC)"
-                           "WHERE user_id = (?)",
-                           (user_id,)).fetchall()
+    tasks = cursor.execute(
+        "SELECT task_id, status_of_solution, date_of_creating FROM (SELECT * FROM tasks ORDER BY date_of_creating DESC)"
+        "WHERE user_id = (?)",
+        (user_id,)).fetchall()
     con.commit()
     con.close()
     return tasks
-
-
 
 
 def select_task(task_id):
@@ -343,6 +344,7 @@ def check_solver_in_db(user_id):
     con.close()
     return True
 
+
 def check_photo_of_task(user_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
@@ -355,6 +357,7 @@ def check_photo_of_task(user_id):
         return False
     con.close()
     return True
+
 
 def check_name_of_user(user_id):
     con = sqlite3.connect('bot_database.db')
@@ -414,6 +417,7 @@ def get_solvers_id():
     con.close()
     return a
 
+
 def get_solvers_from_selected_group(group):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
@@ -421,16 +425,19 @@ def get_solvers_from_selected_group(group):
     con.close()
     return a
 
+
 def add_error_to_error_list(user_id, name_of_function, error_text):
     try:
         con = sqlite3.connect('bot_database.db')
         cursor = con.cursor()
-        cursor.execute("INSERT INTO error_list(user_id, name_of_function, error_text) VALUES (?, ?, ?)", (user_id, name_of_function, error_text))
+        cursor.execute("INSERT INTO error_list(user_id, name_of_function, error_text) VALUES (?, ?, ?)",
+                       (user_id, name_of_function, error_text))
         con.commit()
         con.close()
     except Exception as error:
         con.close()
         print(str(error))
+
 
 def add_solver_profit_made(solver_id, price):
     try:
@@ -500,6 +507,7 @@ def get_difficulty_of_task(task_id):
     con.close()
     return a[0]
 
+
 def get_current_group():
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
@@ -507,12 +515,14 @@ def get_current_group():
     con.close()
     return a[0]
 
+
 def get_num_of_groups():
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT num_of_groups FROM groups").fetchone()
     con.close()
     return a[0]
+
 
 def set_number_of_groups(number):
     try:
@@ -523,13 +533,66 @@ def set_number_of_groups(number):
         con.close()
     except Exception as error:
         con.close()
-        print('increment'+str(error))
+        print('increment' + str(error))
+
+
+def delete_solver_from_db(user_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM solver WHERE user_id  = (?)", (user_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print('increment' + str(error))
+
+
+def set_fixing_task_id(user_id, task_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET fixing_task_id = (?) WHERE user_id = (?)", (task_id, user_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print('increment' + str(error))
+
+
+def get_fixing_task_id(user_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT fixing_task_id FROM solver WHERE user_id = (?)", (user_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
+def increment_num_of_groups():
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE groups SET num_of_groups = num_of_groups+1")
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print('increment' + str(error))
+
+
+def get_num_of_solvers_of_selected_group(group):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT COUNT (*) FROM solver WHERE num_of_group = (?)", (group,)).fetchone()
+    con.close()
+    return a[0]
+
 
 def increment_current_group():
     try:
         num_of_groups = int(get_num_of_groups())
         current_group = int(get_current_group())
-        current_group = (current_group+1)%num_of_groups
+        current_group = (current_group + 1) % num_of_groups
         con = sqlite3.connect('bot_database.db')
         cursor = con.cursor()
         cursor.execute("UPDATE groups SET current_group = (?)", (current_group,))
@@ -537,7 +600,7 @@ def increment_current_group():
         con.close()
     except Exception as error:
         con.close()
-        print('increment'+str(error))
+        print('increment' + str(error))
 
 
 def get_picture_of_task(task_id):
@@ -600,12 +663,13 @@ def task_completed_message_for_solver(task_id):
     return text
 
 
-def get_num_of_sended_photos(task_id):
+def count_num_solution_photos(task_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    a = cursor.execute("SELECT COUNT (*) FROM photos_of_solutions WHERE task_id = (?)", (task_id,)).fetchone()
+    a = cursor.execute("SELECT COUNT(*) FROM photos_of_solutions WHERE task_id = (?)", (task_id,)).fetchone()
     con.close()
     return a[0]
+
 
 def get_num_of_solution_photos(solver_id):
     con = sqlite3.connect('bot_database.db')
@@ -613,6 +677,19 @@ def get_num_of_solution_photos(solver_id):
     a = cursor.execute("SELECT current_photo_sended FROM solver WHERE user_id = (?)", (solver_id,)).fetchone()
     con.close()
     return a[0]
+
+
+def set_num_of_current_sended_photos(solver_id, num_of_photos):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET current_photo_sended = (?) WHERE user_id = (?)",
+                       (num_of_photos, solver_id))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
 
 
 def refresh_num_of_sended_photos(solver_id):
@@ -647,6 +724,57 @@ def add_photo_of_solution(solver_id, photo):
         task_id = get_current_task(solver_id)
         photo_id = str(task_id) + '_' + str(get_num_of_solution_photos(solver_id))
         increment_num_of_sended_photos(solver_id)
+        cursor.execute("INSERT INTO photos_of_solutions(photo_id, task_id, photo) VALUES (?, ?, ?)",
+                       (photo_id, task_id, photo))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def set_num_of_fixed_photos_sended(solver_id, num_of_photos):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET current_fixed_photos_sended = (?) WHERE user_id = (?)",
+                       (num_of_photos, solver_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def increment_num_of_fixed_photos_sended(solver_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("UPDATE solver SET current_fixed_photos_sended = current_fixed_photos_sended + 1 WHERE user_id = (?)", (solver_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_num_of_fixed_photos_sended(solver_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT current_fixed_photos_sended FROM solver WHERE user_id = (?)", (solver_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
+def add_photo_of_fixing_solution(solver_id, photo):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        task_id = get_fixing_task_id(solver_id)
+        num_of_sended_photos = count_num_solution_photos(task_id)
+        photo_id = str(task_id) + '_' + str(get_num_of_solution_photos(solver_id))
+        increment_num_of_sended_photos(solver_id)
+        increment_num_of_fixed_photos_sended(solver_id)
         cursor.execute("INSERT INTO photos_of_solutions(photo_id, task_id, photo) VALUES (?, ?, ?)",
                        (photo_id, task_id, photo))
         con.commit()
@@ -756,11 +884,13 @@ def get_today_solutions_of_solver(solver_id):
     con.close()
     return a
 
+
 def get_yesterday_solutions_of_solver(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    a = cursor.execute("SELECT price_of_task FROM tasks WHERE date(date_of_solution) = date('now','-1 day') and solver_id = (?)",
-                       (solver_id,)).fetchall()
+    a = cursor.execute(
+        "SELECT price_of_task FROM tasks WHERE date(date_of_solution) = date('now','-1 day') and solver_id = (?)",
+        (solver_id,)).fetchall()
     con.close()
     return a
 
@@ -876,6 +1006,7 @@ def add_message_to_support(user_id, text):
         con.close()
         print(error)
 
+
 def set_time_of_accept(task_id):
     try:
         con = sqlite3.connect('bot_database.db')
@@ -890,22 +1021,33 @@ def set_time_of_accept(task_id):
         print(error)
 
 
+def get_time_of_accept(task_id):
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute("SELECT time_of_accept FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
+    con.close()
+    return a[0]
+
+
 def get_list_of_paid_tasks(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
-    a = cursor.execute("SELECT task_id, price_of_task, time_of_accept FROM tasks WHERE solver_id = (?) and status_of_solution = 5", (solver_id,)).fetchall()
+    a = cursor.execute(
+        "SELECT task_id, price_of_task, time_of_accept FROM tasks WHERE solver_id = (?) and status_of_solution = 5",
+        (solver_id,)).fetchall()
     con.close()
     return a
-
 
 
 def get_list_of_unpaid_tasks(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT task_id, price_of_task FROM tasks WHERE solver_id = (?) and status_of_solution = 3 and "
-                       "date(date_of_creating) > date('now', '-1 days') and date(date_of_creating) <= date('now')", (solver_id,)).fetchall()
+                       "date(date_of_creating) > date('now', '-1 days') and date(date_of_creating) <= date('now')",
+                       (solver_id,)).fetchall()
     con.close()
     return a
+
 
 def get_list_of_solved_task(solver_id):
     con = sqlite3.connect('bot_database.db')
@@ -916,16 +1058,18 @@ def get_list_of_solved_task(solver_id):
     con.close()
     return a
 
+
 def delete_selected_task(task_id):
     try:
         con = sqlite3.connect('bot_database.db')
         cursor = con.cursor()
-        cursor.execute("DELETE FROM tasks WHERE task_id = (?)", (task_id,))
+        cursor.execute("UPDATE tasks SET status_of_solution = 6 WHERE task_id = (?)", (task_id,))
         con.commit()
         con.close()
     except Exception as error:
         con.close()
         print(error)
+
 
 def delete_all_photos_of_solution(task_id):
     try:
@@ -939,12 +1083,63 @@ def delete_all_photos_of_solution(task_id):
         print(error)
 
 
+def delete_single_photo_of_solution(photo_id):
+    try:
+        con = sqlite3.connect('bot_database.db')
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM photos_of_solutions WHERE photo_id = (?)", (photo_id,))
+        con.commit()
+        con.close()
+    except Exception as error:
+        con.close()
+        print(error)
+
+
+def get_list_of_solvers_by_groups():
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    current_group = 0
+    a = cursor.execute('SELECT user_id, name, num_of_group FROM solver ORDER BY num_of_group').fetchall()
+    text = 'Группа 0:\n'
+    for index in range(len(a) - 1):
+        if a[index][2] == a[index + 1][2]:
+            text += str(a[index][1]) + ' ' + str(a[index][0]) + '\n'
+        else:
+            current_group += 1
+            text += str(a[index][1]) + ' ' + str(a[index][0]) + f'\n\nГруппа {current_group}:\n'
+
+    text += str(a[-1][1]) + ' ' + str(a[-1][0])
+    con.close()
+    return text
+
+def get_statistics_by_group():
+    con = sqlite3.connect('bot_database.db')
+    cursor = con.cursor()
+    a = cursor.execute(
+        "SELECT price_of_task, num_of_group FROM (SELECT * FROM tasks WHERE status_of_solution = 1 and date(date_of_solution) = date('now')) ORDER BY num_of_group").fetchall()
+    profit = {}
+    num_of_groups = 2
+    for i in range(num_of_groups):
+        profit[i] = [0, 0]
+    for task in a:
+        profit[task[1]][0] += 1
+        profit[task[1]][1] += task[0]
+
+    text = ''
+    for i in range(num_of_groups):
+        text += f'{i} группа: {profit[i][0]} задач, выручка {profit[i][1]} рублей\n\n'
+
+    con.close()
+    return text
+
+
 def get_status_of_solution(task_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT status_of_solution FROM tasks WHERE task_id = (?)", (task_id,)).fetchone()
     con.close()
     return a[0]
+
 
 def check_task_id_db(task_id):
     con = sqlite3.connect('bot_database.db')
@@ -956,12 +1151,15 @@ def check_task_id_db(task_id):
     con.close()
     return True
 
+
 def get_last_five_users():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
     cursor = con.cursor()
-    a = cursor.execute('SELECT name, user_id, balance FROM (SELECT * FROM client ORDER BY date_of_registration DESC LIMIT 5)').fetchall()
+    a = cursor.execute(
+        'SELECT name, user_id, balance FROM (SELECT * FROM client ORDER BY date_of_registration DESC LIMIT 5)').fetchall()
     con.close()
     return a
+
 
 def add_money_to_user(user_id, money):
     try:
@@ -974,6 +1172,7 @@ def add_money_to_user(user_id, money):
         con.close()
         print(error)
 
+
 def set_rotating_task_id(solver_id, task_id):
     try:
         con = sqlite3.connect('bot_database.db')
@@ -985,12 +1184,14 @@ def set_rotating_task_id(solver_id, task_id):
         con.close()
         print(error)
 
+
 def get_rotating_task_id(solver_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT rotating_task_id FROM solver WHERE user_id = (?)", (solver_id,)).fetchone()
     con.close()
     return a[0]
+
 
 def set_group_of_task(task_id, group):
     try:
@@ -1002,6 +1203,7 @@ def set_group_of_task(task_id, group):
     except Exception as error:
         con.close()
         print(error)
+
 
 def get_group_of_task(task_id):
     con = sqlite3.connect('bot_database.db')
@@ -1022,6 +1224,7 @@ def set_question_task_id(user_id, task_id):
         con.close()
         print(error)
 
+
 def get_question_task_id(user_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
@@ -1041,12 +1244,14 @@ def set_answer_task_id(user_id, task_id):
         con.close()
         print(error)
 
+
 def get_answer_task_id(user_id):
     con = sqlite3.connect('bot_database.db')
     cursor = con.cursor()
     a = cursor.execute("SELECT answer_task_id FROM solver WHERE user_id = (?)", (user_id,)).fetchone()
     con.close()
     return a[0]
+
 
 def set_solver_group(user_id, group):
     try:
@@ -1068,11 +1273,13 @@ def get_list_of_solvers():
     con.close()
     return a
 
+
 def ban_list():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
     cursor = con.cursor()
     cursor.execute('CREATE TABLE IF NOT EXISTS ban_list (user_id BIGINT PRIMARY KEY);')
     con.close()
+
 
 def payment_list():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
@@ -1080,6 +1287,7 @@ def payment_list():
     cursor.execute('CREATE TABLE IF NOT EXISTS payments (user_id BIGINT, amount BIGINT, time_of_message '
                    'TIME DEFAULT (CURRENT_TIMESTAMP));')
     con.close()
+
 
 def add_user_to_ban_list(user_id):
     try:
@@ -1091,6 +1299,7 @@ def add_user_to_ban_list(user_id):
     except Exception as error:
         con.close()
         print(error)
+
 
 def remove_user_to_ban_list(user_id):
     try:
@@ -1172,6 +1381,7 @@ def get_key_for_registration():
     con.close()
     return a[0]
 
+
 def count_today_users():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
     cursor = con.cursor()
@@ -1179,12 +1389,14 @@ def count_today_users():
     con.close()
     return a[0]
 
+
 def money_on_user_balances():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
     cursor = con.cursor()
     a = cursor.execute("SELECT SUM(balance) FROM client").fetchone()
     con.close()
     return a[0]
+
 
 def today_payments():
     con = sqlite3.connect('bot_database.db')  # Возвращает True, если пользователь есть в бд, иначе False
