@@ -1083,7 +1083,7 @@ def send_recipies(message):
                              title='Пополнение счета',
                              description='Пополнение счета в боте MathHelpersBot',
                              invoice_payload='true',
-                             provider_token='390540012:LIVE:16909',
+                             provider_token='pass',
                              currency='RUB',
                              prices=[types.LabeledPrice(label='Rub', amount=amount)],
                              start_parameter='add_money',
