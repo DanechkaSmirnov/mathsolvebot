@@ -10,10 +10,9 @@ import random
 import string
 
 
-# API_TOKEN = '1746641292:AAE0c9i1cXYPeFglByfTzO6DyHI3FH7TRlk' #MathHelpersBot
-API_TOKEN = '1630703867:AAGLXyE_HNkkp0Tv3rPSOy4HeH7JhMiRuPU'  # MathHelpersTestBot
+
 bot = telebot.TeleBot(API_TOKEN, threaded=False)
-key_for_registration = 'rngofrhfrprvbfjegtfsdwlvuufracdp'
+
 
 
 # WEBHOOK_HOST = '194.67.105.41'
